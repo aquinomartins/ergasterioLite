@@ -1,0 +1,8 @@
+.env
+/vendor/
+/node_modules/
+/storage/logs/*.log
+/storage/uploads/*
+!/storage/uploads/.gitignore
+/public/assets/img/*
+!/public/assets/img/.gitignore
