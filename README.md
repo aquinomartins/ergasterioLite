@@ -76,8 +76,6 @@ php artisan key:generate
 
 Edite o `.env` com os dados do seu banco MySQL/MariaDB.
 
-> **Atenção:** se `APP_KEY` ficar vazia no servidor, o Laravel responderá com erro 500 durante a inicialização.
-
 ### 3. Variáveis de ambiente mínimas
 
 ```env
@@ -127,7 +125,7 @@ npm run dev
 1. Faça upload do projeto para fora da pasta pública do servidor.
 2. Aponte o domínio/subdomínio para a pasta `public/` do projeto.
 3. Rode `composer install --no-dev --optimize-autoloader` no ambiente de deploy, ou envie a pasta `vendor/` já gerada se sua hospedagem não permitir Composer.
-4. Configure o `.env` com banco, URL final e uma `APP_KEY` válida.
+4. Configure o `.env` com banco e URL final.
 5. Execute `php artisan migrate --force`.
 6. Execute `php artisan db:seed --force` apenas na primeira instalação.
 7. Rode `php artisan storage:link` se o provedor permitir links simbólicos; se não permitir, configure upload diretamente em pasta pública controlada.
