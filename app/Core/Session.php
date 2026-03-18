@@ -24,12 +24,12 @@ final class Session
         session_start();
     }
 
-    public static function get(string $key, mixed $default = null): mixed
+    public static function get(string $key, $default = null)
     {
         return $_SESSION[$key] ?? $default;
     }
 
-    public static function set(string $key, mixed $value): void
+    public static function set(string $key, $value): void
     {
         $_SESSION[$key] = $value;
     }

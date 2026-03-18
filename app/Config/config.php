@@ -5,17 +5,39 @@ declare(strict_types=1);
 $root = dirname(__DIR__, 2);
 $envPath = $root . '/.env';
 
+if (! function_exists('app_str_starts_with')) {
+    function app_str_starts_with($haystack, $needle)
+    {
+        if ($needle === '') {
+            return true;
+        }
+
+        return strncmp($haystack, $needle, strlen($needle)) === 0;
+    }
+}
+
+if (! function_exists('app_str_contains')) {
+    function app_str_contains($haystack, $needle)
+    {
+        if ($needle === '') {
+            return true;
+        }
+
+        return strpos($haystack, $needle) !== false;
+    }
+}
+
 if (is_file($envPath)) {
     $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
 
     foreach ($lines as $line) {
         $line = trim($line);
 
-        if ($line === '' || str_starts_with($line, '#') || ! str_contains($line, '=')) {
+        if ($line === '' || app_str_starts_with($line, '#') || ! app_str_contains($line, '=')) {
             continue;
         }
 
-        [$name, $value] = explode('=', $line, 2);
+        list($name, $value) = explode('=', $line, 2);
         $name = trim($name);
         $value = trim(trim($value), "\"'");
 
@@ -25,7 +47,7 @@ if (is_file($envPath)) {
     }
 }
 
-$get = static function (string $key, mixed $default = null): mixed {
+$get = static function (string $key, $default = null) {
     $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
 
     if ($value === false || $value === null || $value === '') {

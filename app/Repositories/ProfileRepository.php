@@ -10,8 +10,11 @@ use PDO;
 
 final class ProfileRepository
 {
-    public function __construct(private readonly ?PDO $pdo = null)
+    private ?PDO $pdo;
+
+    public function __construct(?PDO $pdo = null)
     {
+        $this->pdo = $pdo;
     }
 
     private function connection(): PDO

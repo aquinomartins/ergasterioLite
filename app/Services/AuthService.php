@@ -38,18 +38,18 @@ final class AuthService
 
         try {
             $userId = $this->users->create(new User(
-                id: null,
-                email: $data['email'],
-                passwordHash: password_hash($data['password'], PASSWORD_DEFAULT),
-                status: 'active',
+                null,
+                $data['email'],
+                password_hash($data['password'], PASSWORD_DEFAULT),
+                'active'
             ));
 
             $this->profiles->create(new Profile(
-                id: null,
-                userId: $userId,
-                displayName: $data['display_name'],
-                username: $data['username'],
-                bio: '',
+                null,
+                $userId,
+                $data['display_name'],
+                $data['username'],
+                ''
             ));
 
             $pdo->commit();
@@ -82,11 +82,11 @@ final class AuthService
         }
 
         $this->profiles->updateByUserId($userId, new Profile(
-            id: (int) $current['id'],
-            userId: $userId,
-            displayName: $data['display_name'],
-            username: $data['username'],
-            bio: $data['bio'],
+            (int) $current['id'],
+            $userId,
+            $data['display_name'],
+            $data['username'],
+            $data['bio']
         ));
 
         return [];

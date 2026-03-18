@@ -10,17 +10,17 @@ final class Router
 {
     private array $routes = [];
 
-    public function get(string $path, array|callable $handler, array $middleware = []): void
+    public function get(string $path, $handler, array $middleware = []): void
     {
         $this->add('GET', $path, $handler, $middleware);
     }
 
-    public function post(string $path, array|callable $handler, array $middleware = []): void
+    public function post(string $path, $handler, array $middleware = []): void
     {
         $this->add('POST', $path, $handler, $middleware);
     }
 
-    public function add(string $method, string $path, array|callable $handler, array $middleware = []): void
+    public function add(string $method, string $path, $handler, array $middleware = []): void
     {
         $this->routes[strtoupper($method)][rtrim($path, '/') ?: '/'] = [
             'handler' => $handler,
@@ -50,7 +50,7 @@ final class Router
             return;
         }
 
-        [$controllerClass, $action] = $handler;
+        list($controllerClass, $action) = $handler;
 
         if (! class_exists($controllerClass)) {
             throw new RuntimeException('Controller não encontrado: ' . $controllerClass);

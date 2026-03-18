@@ -6,20 +6,22 @@ namespace App\Core;
 
 final class App
 {
+    private array $config;
     private Router $router;
 
-    public function __construct(private readonly array $config)
+    public function __construct(array $config)
     {
+        $this->config = $config;
         View::share('app', $this->config['app']);
         $this->router = new Router();
     }
 
-    public function get(string $path, array|callable $handler, array $middleware = []): void
+    public function get(string $path, $handler, array $middleware = []): void
     {
         $this->router->get($path, $handler, $middleware);
     }
 
-    public function post(string $path, array|callable $handler, array $middleware = []): void
+    public function post(string $path, $handler, array $middleware = []): void
     {
         $this->router->post($path, $handler, $middleware);
     }

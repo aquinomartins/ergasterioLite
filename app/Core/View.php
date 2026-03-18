@@ -10,7 +10,7 @@ final class View
 {
     private static array $shared = [];
 
-    public static function share(string $key, mixed $value): void
+    public static function share(string $key, $value): void
     {
         self::$shared[$key] = $value;
     }
