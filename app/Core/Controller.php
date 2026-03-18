@@ -16,7 +16,7 @@ abstract class Controller
         self::redirect($path);
     }
 
-    public static function redirect(string $path): never
+    public static function redirect(string $path): void
     {
         header('Location: ' . $path);
         exit;

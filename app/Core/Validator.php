@@ -17,8 +17,8 @@ final class Validator
                 $ruleName = $rule;
                 $parameter = null;
 
-                if (str_contains($rule, ':')) {
-                    [$ruleName, $parameter] = explode(':', $rule, 2);
+                if (strpos($rule, ':') !== false) {
+                    list($ruleName, $parameter) = explode(':', $rule, 2);
                 }
 
                 $method = 'validate' . ucfirst($ruleName);
@@ -43,35 +43,35 @@ final class Validator
         $this->errors[$field][] = $message;
     }
 
-    private function validateRequired(string $field, mixed $value): void
+    private function validateRequired(string $field, $value): void
     {
         if ($value === null || trim((string) $value) === '') {
             $this->addError($field, 'O campo ' . $field . ' é obrigatório.');
         }
     }
 
-    private function validateEmail(string $field, mixed $value): void
+    private function validateEmail(string $field, $value): void
     {
         if ($value !== null && trim((string) $value) !== '' && ! filter_var($value, FILTER_VALIDATE_EMAIL)) {
             $this->addError($field, 'Informe um e-mail válido.');
         }
     }
 
-    private function validateMin(string $field, mixed $value, ?string $parameter): void
+    private function validateMin(string $field, $value, ?string $parameter): void
     {
         if ($value !== null && mb_strlen(trim((string) $value)) < (int) $parameter) {
             $this->addError($field, 'O campo ' . $field . ' deve ter no mínimo ' . $parameter . ' caracteres.');
         }
     }
 
-    private function validateMax(string $field, mixed $value, ?string $parameter): void
+    private function validateMax(string $field, $value, ?string $parameter): void
     {
         if ($value !== null && mb_strlen(trim((string) $value)) > (int) $parameter) {
             $this->addError($field, 'O campo ' . $field . ' deve ter no máximo ' . $parameter . ' caracteres.');
         }
     }
 
-    private function validateConfirmed(string $field, mixed $value, ?string $parameter, array $input): void
+    private function validateConfirmed(string $field, $value, ?string $parameter, array $input): void
     {
         $confirmationField = $parameter ?: $field . '_confirmation';
 
@@ -80,7 +80,7 @@ final class Validator
         }
     }
 
-    private function validateAlphaNumDash(string $field, mixed $value): void
+    private function validateAlphaNumDash(string $field, $value): void
     {
         if ($value !== null && trim((string) $value) !== '' && ! preg_match('/^[a-zA-Z0-9_-]+$/', (string) $value)) {
             $this->addError($field, 'Use apenas letras, números, hífen e underscore.');

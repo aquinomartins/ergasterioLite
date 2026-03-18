@@ -11,10 +11,21 @@ use App\Core\Session;
 $root = dirname(__DIR__);
 define('BASE_PATH', $root);
 
+if (! function_exists('app_str_starts_with')) {
+    function app_str_starts_with($haystack, $needle)
+    {
+        if ($needle === '') {
+            return true;
+        }
+
+        return strncmp($haystack, $needle, strlen($needle)) === 0;
+    }
+}
+
 spl_autoload_register(static function (string $class): void {
     $prefix = 'App\\';
 
-    if (! str_starts_with($class, $prefix)) {
+    if (! app_str_starts_with($class, $prefix)) {
         return;
     }
 

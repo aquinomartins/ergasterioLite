@@ -6,13 +6,26 @@ namespace App\Models;
 
 final class User
 {
+    public ?int $id;
+    public string $email;
+    public string $passwordHash;
+    public string $status;
+    public ?string $createdAt;
+    public ?string $updatedAt;
+
     public function __construct(
-        public readonly ?int $id,
-        public readonly string $email,
-        public readonly string $passwordHash,
-        public readonly string $status,
-        public readonly ?string $createdAt = null,
-        public readonly ?string $updatedAt = null,
+        ?int $id,
+        string $email,
+        string $passwordHash,
+        string $status,
+        ?string $createdAt = null,
+        ?string $updatedAt = null
     ) {
+        $this->id = $id;
+        $this->email = $email;
+        $this->passwordHash = $passwordHash;
+        $this->status = $status;
+        $this->createdAt = $createdAt;
+        $this->updatedAt = $updatedAt;
     }
 }

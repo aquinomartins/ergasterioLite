@@ -6,14 +6,29 @@ namespace App\Models;
 
 final class Profile
 {
+    public ?int $id;
+    public int $userId;
+    public string $displayName;
+    public string $username;
+    public string $bio;
+    public ?string $createdAt;
+    public ?string $updatedAt;
+
     public function __construct(
-        public readonly ?int $id,
-        public readonly int $userId,
-        public readonly string $displayName,
-        public readonly string $username,
-        public readonly string $bio = '',
-        public readonly ?string $createdAt = null,
-        public readonly ?string $updatedAt = null,
+        ?int $id,
+        int $userId,
+        string $displayName,
+        string $username,
+        string $bio = '',
+        ?string $createdAt = null,
+        ?string $updatedAt = null
     ) {
+        $this->id = $id;
+        $this->userId = $userId;
+        $this->displayName = $displayName;
+        $this->username = $username;
+        $this->bio = $bio;
+        $this->createdAt = $createdAt;
+        $this->updatedAt = $updatedAt;
     }
 }
