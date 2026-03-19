@@ -62,7 +62,7 @@ return [
         'name' => $get('APP_NAME', 'Ergastério Lite'),
         'url' => $get('APP_URL', 'http://localhost:8000'),
         'env' => $get('APP_ENV', 'production'),
-        'debug' => filter_var($get('APP_DEBUG', false), FILTER_VALIDATE_BOOL),
+        'debug' => filter_var($get('APP_DEBUG', false), FILTER_VALIDATE_BOOLEAN),
     ],
     'database' => [
         'host' => $get('DB_HOST', '127.0.0.1'),
