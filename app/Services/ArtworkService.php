@@ -101,7 +101,7 @@ final class ArtworkService
             return ['errors' => ['image' => ['Envie uma imagem JPG ou PNG válida.']]];
         }
 
-        $directory = BASE_PATH . '/storage/uploads';
+        $directory = BASE_PATH . '/public/uploads/artworks';
 
         if (! is_dir($directory)) {
             mkdir($directory, 0775, true);
@@ -116,7 +116,7 @@ final class ArtworkService
 
         return [
             'errors' => [],
-            'path' => '/storage/uploads/' . $filename,
+            'path' => '/uploads/artworks/' . $filename,
         ];
     }
 
