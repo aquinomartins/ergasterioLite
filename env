@@ -1,0 +1,12 @@
+APP_NAME="Ergastério Lite"
+APP_URL="https://aquino.bsb.br"
+APP_ENV="production"
+APP_DEBUG=false
+SESSION_NAME="ergasterio_lite"
+
+DB_HOST="localhost"
+DB_PORT=3306
+DB_NAME="oftalmol_ergasterioLite"
+DB_USER="oftalmol_aquino"
+DB_PASS="#Fend721fine170"
+DB_CHARSET="utf8mb4"
