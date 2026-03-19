@@ -6,7 +6,6 @@ use App\Controllers\ArtistController;
 use App\Controllers\ArtworkController;
 use App\Controllers\AuthController;
 use App\Controllers\HomeController;
-use App\Controllers\MediaController;
 
 $app->get('/', [HomeController::class, 'index']);
 $app->get('/register', [AuthController::class, 'showRegister'], ['guest']);
@@ -27,4 +26,3 @@ $app->get('/artworks', [ArtworkController::class, 'index']);
 $app->get('/artworks/create', [ArtworkController::class, 'create'], ['auth']);
 $app->post('/artworks', [ArtworkController::class, 'store'], ['auth']);
 $app->get('/artworks/{slug}', [ArtworkController::class, 'show']);
-$app->get('/media/artworks/{file}', [MediaController::class, 'artwork']);
