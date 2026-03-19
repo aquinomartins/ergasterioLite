@@ -14,6 +14,7 @@ use App\Core\Csrf;
             <a href="/">Início</a>
             <a href="/artists">Artistas</a>
             <a href="/artworks">Obras</a>
+            <a href="/markets">Mercados</a>
             <?php if ($currentUser): ?>
                 <a href="/dashboard">Dashboard</a>
                 <a href="/profile/edit">Perfil</a>
