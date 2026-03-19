@@ -11,6 +11,7 @@ use App\Repositories\ArtworkRepository;
 final class ArtworkService
 {
     private const MAX_IMAGE_SIZE = 5_242_880;
+    private const PUBLIC_UPLOADS_PREFIX = '/storage/uploads/';
     private const ALLOWED_IMAGE_TYPES = [
         'image/jpeg' => 'jpg',
         'image/png' => 'png',
@@ -116,7 +117,7 @@ final class ArtworkService
 
         return [
             'errors' => [],
-            'path' => '/storage/uploads/' . $filename,
+            'path' => self::PUBLIC_UPLOADS_PREFIX . $filename,
         ];
     }
 
