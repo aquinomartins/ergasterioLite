@@ -12,6 +12,8 @@ use App\Core\Csrf;
 
         <nav class="site-nav" data-nav>
             <a href="/">Início</a>
+            <a href="/artists">Artistas</a>
+            <a href="/artworks">Obras</a>
             <?php if ($currentUser): ?>
                 <a href="/dashboard">Dashboard</a>
                 <a href="/profile/edit">Perfil</a>

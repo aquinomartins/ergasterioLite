@@ -22,9 +22,13 @@ final class Router
 
     public function add(string $method, string $path, $handler, array $middleware = []): void
     {
-        $this->routes[strtoupper($method)][rtrim($path, '/') ?: '/'] = [
+        $normalizedPath = rtrim($path, '/') ?: '/';
+
+        $this->routes[strtoupper($method)][] = [
+            'path' => $normalizedPath,
             'handler' => $handler,
             'middleware' => $middleware,
+            'pattern' => $this->compilePattern($normalizedPath),
         ];
     }
 
@@ -33,7 +37,7 @@ final class Router
         $path = parse_url($uri, PHP_URL_PATH) ?: '/';
         $path = rtrim($path, '/') ?: '/';
         $method = strtoupper($method);
-        $route = $this->routes[$method][$path] ?? null;
+        $route = $this->match($method, $path);
 
         if ($route === null) {
             http_response_code(404);
@@ -45,16 +49,16 @@ final class Router
 
         $handler = $route['handler'];
 
-if ($handler instanceof \Closure) {
-    $handler();
-    return;
-}
+        if ($handler instanceof \Closure) {
+            $handler(...$route['parameters']);
+            return;
+        }
 
-if (! is_array($handler) || count($handler) !== 2) {
-    throw new RuntimeException('Handler de rota inválido.');
-}
+        if (! is_array($handler) || count($handler) !== 2) {
+            throw new RuntimeException('Handler de rota inválido.');
+        }
 
-list($controllerClass, $action) = $handler;
+        [$controllerClass, $action] = $handler;
 
         if (! class_exists($controllerClass)) {
             throw new RuntimeException('Controller não encontrado: ' . $controllerClass);
@@ -66,7 +70,7 @@ list($controllerClass, $action) = $handler;
             throw new RuntimeException('Action não encontrada: ' . $action);
         }
 
-        $controller->{$action}();
+        $controller->{$action}(...$route['parameters']);
     }
 
     private function runMiddleware(array $middleware): void
@@ -86,5 +90,43 @@ list($controllerClass, $action) = $handler;
             http_response_code(419);
             exit('CSRF token inválido.');
         }
+    }
+
+    private function compilePattern(string $path): string
+    {
+        if ($path === '/') {
+            return '#^/$#';
+        }
+
+        $pattern = preg_replace_callback(
+            '/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/',
+            static fn (array $matches): string => '(?P<' . $matches[1] . '>[^/]+)',
+            $path
+        );
+
+        return '#^' . $pattern . '$#';
+    }
+
+    private function match(string $method, string $path): ?array
+    {
+        foreach ($this->routes[$method] ?? [] as $route) {
+            if (! preg_match($route['pattern'], $path, $matches)) {
+                continue;
+            }
+
+            $parameters = [];
+
+            foreach ($matches as $key => $value) {
+                if (! is_int($key)) {
+                    $parameters[] = $value;
+                }
+            }
+
+            $route['parameters'] = $parameters;
+
+            return $route;
+        }
+
+        return null;
     }
 }

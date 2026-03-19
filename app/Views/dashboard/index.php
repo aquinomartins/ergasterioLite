@@ -27,8 +27,8 @@
     <article class="card">
         <h2>Próximas extensões</h2>
         <ul>
-            <li>Cadastro de artistas</li>
-            <li>Cadastro de obras com upload</li>
+            <li>Cadastro de artistas com slug automático</li>
+            <li>Cadastro de obras com upload de imagem</li>
             <li>Criação de mercados preditivos</li>
         </ul>
         <a class="button button-secondary" href="/profile/edit">Editar perfil</a>
