@@ -13,4 +13,76 @@ document.addEventListener('DOMContentLoaded', () => {
       button.closest('[data-flash]')?.remove();
     });
   });
+
+  const marketForm = document.querySelector('[data-market-form]');
+  const optionList = document.querySelector('[data-option-list]');
+  const template = document.querySelector('#market-option-template');
+  const addOptionButton = document.querySelector('[data-add-option]');
+  const marketTypeSelect = document.querySelector('[data-market-type-select]');
+
+  const refreshOptionIndexes = () => {
+    if (!optionList) {
+      return;
+    }
+
+    optionList.querySelectorAll('[data-option-item]').forEach((item, index) => {
+      const title = item.querySelector('h3');
+      if (title) {
+        title.textContent = `Opção ${index + 1}`;
+      }
+    });
+  };
+
+  const syncEntityBlocks = () => {
+    if (!optionList || !marketTypeSelect) {
+      return;
+    }
+
+    const selectedType = marketTypeSelect.value;
+    optionList.querySelectorAll('[data-option-item]').forEach((item) => {
+      item.querySelectorAll('[data-option-entity]').forEach((block) => {
+        const entityType = block.getAttribute('data-option-entity');
+        const isActive = entityType === selectedType;
+        block.classList.toggle('is-hidden', !isActive);
+
+        block.querySelectorAll('select').forEach((select) => {
+          select.disabled = !isActive;
+        });
+      });
+    });
+  };
+
+  if (marketForm && optionList && template && addOptionButton) {
+    optionList.dataset.nextIndex = String(optionList.querySelectorAll('[data-option-item]').length);
+
+    addOptionButton.addEventListener('click', () => {
+      const index = Number(optionList.dataset.nextIndex || optionList.querySelectorAll('[data-option-item]').length);
+      const html = template.innerHTML
+        .replaceAll('__INDEX__', String(index))
+        .replaceAll('__NUMBER__', String(optionList.querySelectorAll('[data-option-item]').length + 1));
+      optionList.insertAdjacentHTML('beforeend', html);
+      optionList.dataset.nextIndex = String(index + 1);
+      refreshOptionIndexes();
+      syncEntityBlocks();
+    });
+
+    optionList.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-remove-option]');
+      if (!button) {
+        return;
+      }
+
+      const items = optionList.querySelectorAll('[data-option-item]');
+      if (items.length <= 2) {
+        return;
+      }
+
+      button.closest('[data-option-item]')?.remove();
+      refreshOptionIndexes();
+    });
+
+    marketTypeSelect?.addEventListener('change', syncEntityBlocks);
+    syncEntityBlocks();
+    refreshOptionIndexes();
+  }
 });

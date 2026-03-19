@@ -1,0 +1,168 @@
+<?php
+use App\Core\Csrf;
+
+$market = $market ?? [];
+$options = $market['options'] ?? [];
+$snapshots = $market['snapshots'] ?? [];
+$canManageMarkets = $canManageMarkets ?? false;
+$errors = $errors ?? [];
+$status = (string) ($market['status'] ?? 'draft');
+?>
+<section class="card detail-hero market-detail-hero">
+    <div class="status-row">
+        <span class="status-badge status-<?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?></span>
+        <span class="meta-pill"><?= htmlspecialchars((string) ($market['market_type'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
+    </div>
+    <span class="eyebrow">Mercado</span>
+    <h1><?= htmlspecialchars((string) ($market['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?></h1>
+    <p class="lead-text"><?= nl2br(htmlspecialchars((string) ($market['description'] ?? ''), ENT_QUOTES, 'UTF-8')) ?></p>
+
+    <dl class="definition-list market-meta-grid">
+        <div>
+            <dt>Fecha em</dt>
+            <dd><?= date('d/m/Y H:i', strtotime((string) ($market['closes_at'] ?? 'now'))) ?></dd>
+        </div>
+        <div>
+            <dt>Modo de resolução</dt>
+            <dd><?= htmlspecialchars((string) ($market['resolution_mode'] ?? 'manual'), ENT_QUOTES, 'UTF-8') ?></dd>
+        </div>
+        <div>
+            <dt>Criado por</dt>
+            <dd><?= htmlspecialchars((string) ($market['creator_name'] ?? $market['creator_email'] ?? 'Equipe'), ENT_QUOTES, 'UTF-8') ?></dd>
+        </div>
+        <div>
+            <dt>Resultado</dt>
+            <dd><?= htmlspecialchars((string) ($market['resolved_option_label'] ?? 'Ainda não resolvido'), ENT_QUOTES, 'UTF-8') ?></dd>
+        </div>
+    </dl>
+</section>
+
+<section class="section-heading compact-heading">
+    <div>
+        <h2>Opções e probabilidades</h2>
+        <p>Distribuição atual baseada no peso acumulado de cada opção.</p>
+    </div>
+</section>
+
+<section class="card option-list-card">
+    <div class="option-list">
+        <?php foreach ($options as $option): ?>
+            <article class="market-option-row">
+                <div>
+                    <h3><?= htmlspecialchars((string) $option['label'], ENT_QUOTES, 'UTF-8') ?></h3>
+                    <p class="meta-line">
+                        <?php if (! empty($option['artwork_title'])): ?>
+                            Obra vinculada:
+                            <a href="/artworks/<?= htmlspecialchars((string) $option['artwork_slug'], ENT_QUOTES, 'UTF-8') ?>">
+                                <?= htmlspecialchars((string) $option['artwork_title'], ENT_QUOTES, 'UTF-8') ?>
+                            </a>
+                        <?php elseif (! empty($option['artist_name'])): ?>
+                            Artista vinculado:
+                            <a href="/artists/<?= htmlspecialchars((string) $option['artist_slug'], ENT_QUOTES, 'UTF-8') ?>">
+                                <?= htmlspecialchars((string) $option['artist_name'], ENT_QUOTES, 'UTF-8') ?>
+                            </a>
+                        <?php else: ?>
+                            Sem vínculo externo.
+                        <?php endif; ?>
+                    </p>
+                </div>
+                <div class="option-metrics">
+                    <strong><?= number_format(((float) $option['probability_value']) * 100, 2, ',', '.') ?>%</strong>
+                    <span>Peso <?= number_format((float) $option['weight_value'], 2, ',', '.') ?></span>
+                </div>
+                <div class="probability-bar">
+                    <span style="width: <?= max(4, min(100, (int) round(((float) $option['probability_value']) * 100))) ?>%"></span>
+                </div>
+            </article>
+        <?php endforeach; ?>
+    </div>
+</section>
+
+<section class="grid-two market-detail-grid">
+    <article class="card">
+        <div class="section-heading compact-heading market-inline-heading">
+            <div>
+                <h2>Snapshots</h2>
+                <p>Histórico simplificado das probabilidades persistidas.</p>
+            </div>
+        </div>
+
+        <?php if ($snapshots === []): ?>
+            <div class="empty-state inline-state">
+                <p>Nenhum snapshot registrado ainda.</p>
+            </div>
+        <?php else: ?>
+            <div class="snapshot-list">
+                <?php foreach ($snapshots as $snapshot): ?>
+                    <article class="snapshot-card">
+                        <header>
+                            <strong><?= date('d/m/Y H:i', strtotime((string) $snapshot['created_at'])) ?></strong>
+                        </header>
+                        <ul>
+                            <?php foreach (($snapshot['decoded_snapshot']['options'] ?? []) as $snapshotOption): ?>
+                                <li>
+                                    <span><?= htmlspecialchars((string) ($snapshotOption['label'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
+                                    <strong><?= number_format(((float) ($snapshotOption['probability'] ?? 0)) * 100, 2, ',', '.') ?>%</strong>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </article>
+
+    <article class="card">
+        <div class="section-heading compact-heading market-inline-heading">
+            <div>
+                <h2>Ações administrativas</h2>
+                <p>Disponíveis apenas para perfis com status <code>admin</code> ou <code>curator</code>.</p>
+            </div>
+        </div>
+
+        <?php if (! $canManageMarkets): ?>
+            <div class="empty-state inline-state">
+                <p>Você pode acompanhar o mercado, mas as ações de curadoria ficam restritas a perfis autorizados.</p>
+            </div>
+        <?php else: ?>
+            <div class="admin-action-stack">
+                <?php if ($status === 'draft'): ?>
+                    <form method="POST" action="/markets/<?= (int) $market['id'] ?>/publish">
+                        <?= Csrf::input() ?>
+                        <button type="submit" class="button">Publicar mercado</button>
+                    </form>
+                <?php endif; ?>
+
+                <?php if ($status === 'open'): ?>
+                    <form method="POST" action="/markets/<?= (int) $market['id'] ?>/close">
+                        <?= Csrf::input() ?>
+                        <button type="submit" class="button button-secondary">Fechar mercado</button>
+                    </form>
+                <?php endif; ?>
+
+                <?php if (in_array($status, ['open', 'closed'], true)): ?>
+                    <form method="POST" action="/markets/<?= (int) $market['id'] ?>/resolve" class="form-grid">
+                        <?= Csrf::input() ?>
+                        <label>
+                            <span>Opção vencedora</span>
+                            <select name="resolved_option_id" required>
+                                <option value="">Selecione</option>
+                                <?php foreach ($options as $option): ?>
+                                    <option value="<?= (int) $option['id'] ?>"><?= htmlspecialchars((string) $option['label'], ENT_QUOTES, 'UTF-8') ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php foreach ($errors['resolved_option_id'] ?? [] as $message): ?>
+                                <small class="error-text"><?= htmlspecialchars((string) $message, ENT_QUOTES, 'UTF-8') ?></small>
+                            <?php endforeach; ?>
+                        </label>
+                        <button type="submit" class="button">Resolver mercado</button>
+                    </form>
+                <?php endif; ?>
+
+                <?php if ($status === 'resolved'): ?>
+                    <p class="helper-text">Mercado resolvido em favor de <strong><?= htmlspecialchars((string) ($market['resolved_option_label'] ?? ''), ENT_QUOTES, 'UTF-8') ?></strong>.</p>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+    </article>
+</section>

@@ -403,3 +403,229 @@ a {
     }
 }
 
+
+select,
+button,
+input,
+textarea {
+    font: inherit;
+}
+
+select {
+    width: 100%;
+    padding: 0.95rem 1rem;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: #fff;
+}
+
+code {
+    padding: 0.15rem 0.4rem;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.08);
+}
+
+.helper-text {
+    color: var(--muted);
+}
+
+.form-grid-tight {
+    gap: 1rem;
+}
+
+.market-highlight {
+    margin-bottom: 1.5rem;
+}
+
+.market-inline-heading {
+    margin-bottom: 1rem;
+}
+
+.market-card,
+.snapshot-card,
+.option-builder-item {
+    border-radius: calc(var(--radius) - 2px);
+}
+
+.compact-card {
+    padding: 1.5rem;
+}
+
+.status-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.status-badge,
+.meta-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.meta-pill {
+    background: rgba(15, 23, 42, 0.08);
+    color: var(--muted);
+}
+
+.status-draft {
+    background: rgba(148, 163, 184, 0.18);
+    color: #334155;
+}
+
+.status-open {
+    background: rgba(15, 157, 88, 0.14);
+    color: var(--success);
+}
+
+.status-closed {
+    background: rgba(234, 179, 8, 0.18);
+    color: #a16207;
+}
+
+.status-resolved {
+    background: rgba(139, 92, 246, 0.14);
+    color: var(--brand-dark);
+}
+
+.status-cancelled {
+    background: rgba(220, 38, 38, 0.14);
+    color: var(--error);
+}
+
+.meta-stack {
+    display: grid;
+    gap: 0.45rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+}
+
+.market-detail-hero {
+    margin-bottom: 1.5rem;
+}
+
+.market-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.option-list-card {
+    margin-bottom: 1.5rem;
+}
+
+.option-list,
+.snapshot-list,
+.admin-action-stack,
+.market-options-builder,
+.option-builder-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.market-option-row {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1.1rem 0;
+    border-bottom: 1px solid rgba(219, 225, 234, 0.9);
+}
+
+.market-option-row:first-child {
+    padding-top: 0;
+}
+
+.market-option-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.option-metrics {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--muted);
+}
+
+.option-metrics strong {
+    font-size: 1.25rem;
+    color: var(--text);
+}
+
+.probability-bar {
+    width: 100%;
+    height: 0.75rem;
+    border-radius: 999px;
+    background: rgba(139, 92, 246, 0.12);
+    overflow: hidden;
+}
+
+.probability-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(135deg, var(--brand), #ec4899);
+}
+
+.snapshot-card {
+    padding: 1rem 1.2rem;
+    background: rgba(15, 23, 42, 0.03);
+    border: 1px solid rgba(219, 225, 234, 0.9);
+}
+
+.snapshot-card header {
+    margin-bottom: 0.75rem;
+}
+
+.snapshot-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.6rem;
+}
+
+.snapshot-card li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.market-detail-grid {
+    align-items: start;
+}
+
+.market-create-card {
+    margin-bottom: 2rem;
+}
+
+.option-builder-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.danger-link {
+    color: var(--error);
+}
+
+.is-hidden {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .market-meta-grid,
+    .market-detail-grid,
+    .grid-two,
+    .hero {
+        grid-template-columns: 1fr;
+    }
+}

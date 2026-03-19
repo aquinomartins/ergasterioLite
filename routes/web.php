@@ -6,6 +6,7 @@ use App\Controllers\ArtistController;
 use App\Controllers\ArtworkController;
 use App\Controllers\AuthController;
 use App\Controllers\HomeController;
+use App\Controllers\MarketController;
 
 $app->get('/', [HomeController::class, 'index']);
 $app->get('/register', [AuthController::class, 'showRegister'], ['guest']);
@@ -26,3 +27,11 @@ $app->get('/artworks', [ArtworkController::class, 'index']);
 $app->get('/artworks/create', [ArtworkController::class, 'create'], ['auth']);
 $app->post('/artworks', [ArtworkController::class, 'store'], ['auth']);
 $app->get('/artworks/{slug}', [ArtworkController::class, 'show']);
+
+$app->get('/markets', [MarketController::class, 'index']);
+$app->get('/markets/create', [MarketController::class, 'create'], ['auth']);
+$app->post('/markets', [MarketController::class, 'store'], ['auth']);
+$app->get('/markets/{slug}', [MarketController::class, 'show']);
+$app->post('/markets/{id}/publish', [MarketController::class, 'publish'], ['auth']);
+$app->post('/markets/{id}/close', [MarketController::class, 'close'], ['auth']);
+$app->post('/markets/{id}/resolve', [MarketController::class, 'resolve'], ['auth']);
