@@ -45,12 +45,16 @@ final class Router
 
         $handler = $route['handler'];
 
-        if (is_callable($handler)) {
-            $handler();
-            return;
-        }
+if ($handler instanceof \Closure) {
+    $handler();
+    return;
+}
 
-        list($controllerClass, $action) = $handler;
+if (! is_array($handler) || count($handler) !== 2) {
+    throw new RuntimeException('Handler de rota inválido.');
+}
+
+list($controllerClass, $action) = $handler;
 
         if (! class_exists($controllerClass)) {
             throw new RuntimeException('Controller não encontrado: ' . $controllerClass);
