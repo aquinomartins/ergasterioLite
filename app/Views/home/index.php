@@ -4,7 +4,7 @@
         <h1>Mercado preditivo em arte com base leve, clara e pronta para evoluir.</h1>
         <p>
             O Ergastério Lite nasce para validar o produto com uma arquitetura compatível com hospedagem compartilhada,
-            focada em autenticação, perfis e expansão gradual para artistas, obras e mercados.
+            focada em autenticação, perfis, artistas, obras e expansão gradual para mercados.
         </p>
         <div class="hero-actions">
             <a class="button" href="/register">Criar conta</a>
@@ -17,7 +17,7 @@
             <li>Router simples para GET e POST</li>
             <li>Autenticação com sessão, CSRF e flash messages</li>
             <li>Camadas separadas para controllers, services e repositories</li>
-            <li>Migrations SQL iniciais para users e profiles</li>
+            <li>Migrations SQL para users, profiles, artists e artworks</li>
         </ul>
     </aside>
 </section>
