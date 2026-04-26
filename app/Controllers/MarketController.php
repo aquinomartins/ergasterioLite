@@ -11,16 +11,19 @@ use App\Policies\MarketPolicy;
 use App\Requests\ResolveMarketRequest;
 use App\Requests\StoreMarketRequest;
 use App\Services\MarketService;
+use App\Services\PositionService;
 use DomainException;
 
 final class MarketController extends Controller
 {
     private MarketService $markets;
+    private PositionService $positions;
     private MarketPolicy $policy;
 
     public function __construct()
     {
         $this->markets = new MarketService();
+        $this->positions = new PositionService();
         $this->policy = new MarketPolicy();
     }
 
@@ -44,11 +47,16 @@ final class MarketController extends Controller
             return;
         }
 
+        $userId = Auth::id();
+        $balance = $userId !== null ? $this->positions->getUserBalance($userId) : null;
+
         $this->view('markets.show', [
             'pageTitle' => (string) $market['title'],
             'market' => $market,
             'canManageMarkets' => $this->policy->canManage(Auth::user()),
             'errors' => Session::get('errors', []),
+            'userBalance' => $balance,
+            'trades' => $this->positions->getMarketTrades((int) $market['id']),
         ]);
         Session::forget('errors');
     }

@@ -8,7 +8,9 @@ use App\Core\Auth;
 use App\Core\Database;
 use App\Models\Profile;
 use App\Models\User;
+use App\Models\UserBalance;
 use App\Repositories\ProfileRepository;
+use App\Repositories\UserBalanceRepository;
 use App\Repositories\UserRepository;
 use RuntimeException;
 
@@ -16,11 +18,13 @@ final class AuthService
 {
     private UserRepository $users;
     private ProfileRepository $profiles;
+    private UserBalanceRepository $balances;
 
     public function __construct()
     {
         $this->users = new UserRepository();
         $this->profiles = new ProfileRepository();
+        $this->balances = new UserBalanceRepository();
     }
 
     public function register(array $data): array
@@ -51,6 +55,8 @@ final class AuthService
                 $data['username'],
                 ''
             ));
+
+            $this->balances->create(new UserBalance(null, $userId, 1000.00));
 
             $pdo->commit();
             Auth::login($userId);

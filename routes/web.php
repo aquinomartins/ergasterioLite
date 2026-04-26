@@ -7,6 +7,7 @@ use App\Controllers\ArtworkController;
 use App\Controllers\AuthController;
 use App\Controllers\HomeController;
 use App\Controllers\MarketController;
+use App\Controllers\PositionController;
 
 $app->get('/', [HomeController::class, 'index']);
 $app->get('/register', [AuthController::class, 'showRegister'], ['guest']);
@@ -35,3 +36,5 @@ $app->get('/markets/{slug}', [MarketController::class, 'show']);
 $app->post('/markets/{id}/publish', [MarketController::class, 'publish'], ['auth']);
 $app->post('/markets/{id}/close', [MarketController::class, 'close'], ['auth']);
 $app->post('/markets/{id}/resolve', [MarketController::class, 'resolve'], ['auth']);
+
+$app->post('/markets/{id}/positions', [PositionController::class, 'store'], ['auth']);
