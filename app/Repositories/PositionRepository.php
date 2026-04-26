@@ -39,6 +39,39 @@ final class PositionRepository
         return (int) $this->connection()->lastInsertId();
     }
 
+    public function findByUserMarketOption(int $userId, int $marketId, int $optionId): ?array
+    {
+        $statement = $this->connection()->prepare(
+            'SELECT *
+             FROM positions
+             WHERE user_id = :user_id AND market_id = :market_id AND option_id = :option_id
+             LIMIT 1'
+        );
+        $statement->execute([
+            'user_id' => $userId,
+            'market_id' => $marketId,
+            'option_id' => $optionId,
+        ]);
+
+        $position = $statement->fetch();
+
+        return $position ?: null;
+    }
+
+    public function increaseShares(int $positionId, float $sharesAmount): bool
+    {
+        $statement = $this->connection()->prepare(
+            'UPDATE positions
+             SET shares_amount = shares_amount + :shares_amount
+             WHERE id = :id'
+        );
+
+        return $statement->execute([
+            'id' => $positionId,
+            'shares_amount' => $sharesAmount,
+        ]);
+    }
+
     public function getByUserId(int $userId): array
     {
         $statement = $this->connection()->prepare(

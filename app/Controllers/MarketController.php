@@ -53,6 +53,7 @@ final class MarketController extends Controller
         $this->view('markets.show', [
             'pageTitle' => (string) $market['title'],
             'market' => $market,
+            'isAuthenticated' => Auth::check(),
             'canManageMarkets' => $this->policy->canManage(Auth::user()),
             'errors' => Session::get('errors', []),
             'userBalance' => $balance,
