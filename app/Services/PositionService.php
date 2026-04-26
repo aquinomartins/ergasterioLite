@@ -158,10 +158,10 @@ final class PositionService
         $this->positions->increaseShares((int) $existingPosition['id'], $sharesAmount);
     }
 
-    public function getUserBalance(int $userId): ?float
+    public function getUserBalance(int $userId): float
     {
         if (! $this->isUserBalanceEnabled()) {
-            return null;
+            return 0.0;
         }
 
         $balance = $this->ensureUserBalance($userId);
