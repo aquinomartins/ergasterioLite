@@ -12,6 +12,9 @@ use App\Requests\ResolveMarketRequest;
 use App\Requests\StoreMarketRequest;
 use App\Services\MarketService;
 use App\Services\PositionService;
+use App\Services\ResolutionService;
+use App\Repositories\MarketResolutionRepository;
+use App\Repositories\PayoutRepository;
 use DomainException;
 
 final class MarketController extends Controller
@@ -19,12 +22,18 @@ final class MarketController extends Controller
     private MarketService $markets;
     private PositionService $positions;
     private MarketPolicy $policy;
+    private ResolutionService $resolutionService;
+    private MarketResolutionRepository $resolutions;
+    private PayoutRepository $payouts;
 
     public function __construct()
     {
         $this->markets = new MarketService();
         $this->positions = new PositionService();
         $this->policy = new MarketPolicy();
+        $this->resolutionService = new ResolutionService();
+        $this->resolutions = new MarketResolutionRepository();
+        $this->payouts = new PayoutRepository();
     }
 
     public function index(): void
@@ -58,6 +67,9 @@ final class MarketController extends Controller
             'errors' => Session::get('errors', []),
             'userBalance' => $balance,
             'trades' => $this->positions->getMarketTrades((int) $market['id']),
+            'resolution' => $this->resolutions->findByMarketId((int) $market['id']),
+            'marketPayouts' => $this->payouts->getByMarketId((int) $market['id']),
+            'myPayouts' => $userId !== null ? $this->payouts->getByUserId($userId) : [],
         ]);
         Session::forget('errors');
     }
@@ -129,7 +141,12 @@ final class MarketController extends Controller
         $this->guardManager('fechar');
 
         try {
-            $market = $this->markets->closeMarket((int) $id);
+            $actorId = Auth::id();
+            if ($actorId === null) {
+                throw new DomainException('Faça login para fechar mercados.');
+            }
+
+            $market = $this->resolutionService->closeMarket((int) $id, $actorId);
             Session::flash('success', 'Mercado fechado com sucesso.');
             $this->redirectTo('/markets/' . $market['slug']);
         } catch (DomainException $exception) {
@@ -150,7 +167,17 @@ final class MarketController extends Controller
         }
 
         try {
-            $market = $this->markets->resolveMarket((int) $id, (int) $data['resolved_option_id']);
+            $actorId = Auth::id();
+            if ($actorId === null) {
+                throw new DomainException('Faça login para resolver mercados.');
+            }
+
+            $market = $this->resolutionService->resolveMarket(
+                (int) $id,
+                (int) $data['resolved_option_id'],
+                $actorId,
+                $data['resolution_notes']
+            );
             Session::flash('success', 'Mercado resolvido com sucesso.');
             $this->redirectTo('/markets/' . $market['slug']);
         } catch (DomainException $exception) {

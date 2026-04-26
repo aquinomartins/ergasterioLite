@@ -10,6 +10,16 @@ $errors = $errors ?? [];
 $status = (string) ($market['status'] ?? 'draft');
 $userBalance = $userBalance ?? null;
 $trades = $trades ?? [];
+$resolution = $resolution ?? null;
+$marketPayouts = $marketPayouts ?? [];
+$myPayouts = $myPayouts ?? [];
+$userPayoutInMarket = null;
+foreach ($myPayouts as $myPayout) {
+    if ((int) ($myPayout['market_id'] ?? 0) === (int) ($market['id'] ?? 0)) {
+        $userPayoutInMarket = $myPayout;
+        break;
+    }
+}
 ?>
 <section class="card detail-hero market-detail-hero">
     <div class="status-row">
@@ -38,6 +48,53 @@ $trades = $trades ?? [];
             <dd><?= htmlspecialchars((string) ($market['resolved_option_label'] ?? 'Ainda não resolvido'), ENT_QUOTES, 'UTF-8') ?></dd>
         </div>
     </dl>
+
+
+    <article class="card">
+        <div class="section-heading compact-heading market-inline-heading">
+            <div>
+                <h2>Resultado e payouts</h2>
+                <p>Resumo da resolução e distribuição de payoff deste mercado.</p>
+            </div>
+        </div>
+
+        <?php if ($status !== 'resolved'): ?>
+            <p class="helper-text">O mercado ainda não foi resolvido.</p>
+        <?php else: ?>
+            <p class="helper-text">
+                Vencedora: <strong><?= htmlspecialchars((string) ($market['resolved_option_label'] ?? ''), ENT_QUOTES, 'UTF-8') ?></strong>.
+                <?php if (! empty($resolution['resolved_at'])): ?>
+                    Resolvido em <?= date('d/m/Y H:i', strtotime((string) $resolution['resolved_at'])) ?>
+                <?php endif; ?>
+            </p>
+
+            <?php if (! empty($resolution['resolution_notes'])): ?>
+                <p class="helper-text">Observações: <?= nl2br(htmlspecialchars((string) $resolution['resolution_notes'], ENT_QUOTES, 'UTF-8')) ?></p>
+            <?php endif; ?>
+
+            <?php if ($userPayoutInMarket !== null): ?>
+                <p class="helper-text">Seu payoff líquido: <strong><?= number_format((float) $userPayoutInMarket['net_amount'], 2, ',', '.') ?></strong>.</p>
+            <?php elseif ($isAuthenticated): ?>
+                <p class="helper-text">Você não recebeu payout neste mercado.</p>
+            <?php endif; ?>
+
+            <?php if ($canManageMarkets): ?>
+                <?php if ($marketPayouts === []): ?>
+                    <p class="helper-text">Nenhum payout registrado.</p>
+                <?php else: ?>
+                    <ul class="trade-list">
+                        <?php foreach ($marketPayouts as $payout): ?>
+                            <li>
+                                <span><?= htmlspecialchars((string) ($payout['user_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?> · <?= htmlspecialchars((string) ($payout['option_label'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
+                                <strong><?= number_format((float) $payout['net_amount'], 2, ',', '.') ?></strong>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+            <?php endif; ?>
+        <?php endif; ?>
+    </article>
+
 </section>
 
 <section class="section-heading compact-heading">
@@ -244,6 +301,13 @@ $trades = $trades ?? [];
                                 <?php endforeach; ?>
                             </select>
                             <?php foreach ($errors['resolved_option_id'] ?? [] as $message): ?>
+                                <small class="error-text"><?= htmlspecialchars((string) $message, ENT_QUOTES, 'UTF-8') ?></small>
+                            <?php endforeach; ?>
+                        </label>
+                        <label>
+                            <span>Observações (opcional)</span>
+                            <textarea name="resolution_notes" rows="3" placeholder="Justificativa da resolução"></textarea>
+                            <?php foreach ($errors['resolution_notes'] ?? [] as $message): ?>
                                 <small class="error-text"><?= htmlspecialchars((string) $message, ENT_QUOTES, 'UTF-8') ?></small>
                             <?php endforeach; ?>
                         </label>

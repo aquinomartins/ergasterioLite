@@ -187,4 +187,39 @@ final class PositionRepository
 
         return $statement->fetchAll();
     }
+
+    public function getWinningPositions(int $marketId, int $winningOptionId): array
+    {
+        $optionColumn = $this->optionColumn();
+        $sharesColumn = $this->sharesColumn();
+        $statement = $this->connection()->prepare(
+            "SELECT p.*, p.{$optionColumn} AS option_id, p.{$sharesColumn} AS shares_amount,
+                    COALESCE(pr.display_name, pr.username, u.email) AS user_name
+             FROM positions p
+             INNER JOIN users u ON u.id = p.user_id
+             LEFT JOIN profiles pr ON pr.user_id = u.id
+             WHERE p.market_id = :market_id AND p.{$optionColumn} = :option_id
+             ORDER BY p.id ASC"
+        );
+        $statement->execute([
+            'market_id' => $marketId,
+            'option_id' => $winningOptionId,
+        ]);
+
+        return $statement->fetchAll();
+    }
+
+    public function countUserMarketParticipation(int $userId, int $marketId): int
+    {
+        $statement = $this->connection()->prepare(
+            'SELECT COUNT(*) FROM positions WHERE user_id = :user_id AND market_id = :market_id'
+        );
+        $statement->execute([
+            'user_id' => $userId,
+            'market_id' => $marketId,
+        ]);
+
+        return (int) $statement->fetchColumn();
+    }
+
 }
