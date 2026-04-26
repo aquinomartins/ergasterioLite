@@ -11,6 +11,7 @@ use App\Requests\StorePositionRequest;
 use App\Services\MarketService;
 use App\Services\PositionService;
 use DomainException;
+use Throwable;
 
 final class PositionController extends Controller
 {
@@ -55,6 +56,9 @@ final class PositionController extends Controller
         } catch (DomainException $exception) {
             Session::set('errors', ['position' => [$exception->getMessage()]]);
             Session::flash('error', $exception->getMessage());
+        } catch (Throwable $exception) {
+            Session::set('errors', ['position' => ['Não foi possível registrar a participação agora. Tente novamente.']]);
+            Session::flash('error', 'Ocorreu um erro ao processar sua participação.');
         }
 
         $this->redirectTo($redirectPath);
