@@ -11,6 +11,7 @@ use PDO;
 final class TradeRepository
 {
     private ?PDO $pdo;
+    private ?array $columns = null;
 
     public function __construct(?PDO $pdo = null)
     {
@@ -22,11 +23,57 @@ final class TradeRepository
         return $this->pdo ?? Database::connection();
     }
 
+    private function columns(): array
+    {
+        if ($this->columns !== null) {
+            return $this->columns;
+        }
+
+        $statement = $this->connection()->query('SHOW COLUMNS FROM trades');
+        $columns = $statement !== false ? $statement->fetchAll(PDO::FETCH_COLUMN) : [];
+
+        $this->columns = array_map('strval', $columns);
+
+        return $this->columns;
+    }
+
+    private function optionColumn(): string
+    {
+        $columns = $this->columns();
+
+        if (in_array('option_id', $columns, true)) {
+            return 'option_id';
+        }
+
+        if (in_array('market_option_id', $columns, true)) {
+            return 'market_option_id';
+        }
+
+        return 'option_id';
+    }
+
+    private function sharesColumn(): string
+    {
+        $columns = $this->columns();
+
+        if (in_array('shares_amount', $columns, true)) {
+            return 'shares_amount';
+        }
+
+        if (in_array('amount', $columns, true)) {
+            return 'amount';
+        }
+
+        return 'shares_amount';
+    }
+
     public function create(Trade $trade): int
     {
+        $optionColumn = $this->optionColumn();
+        $sharesColumn = $this->sharesColumn();
         $statement = $this->connection()->prepare(
-            'INSERT INTO trades (user_id, market_id, option_id, shares_amount, created_at)
-             VALUES (:user_id, :market_id, :option_id, :shares_amount, NOW())'
+            "INSERT INTO trades (user_id, market_id, {$optionColumn}, {$sharesColumn}, created_at)
+             VALUES (:user_id, :market_id, :option_id, :shares_amount, NOW())"
         );
 
         $statement->execute([
@@ -41,15 +88,20 @@ final class TradeRepository
 
     public function getByMarketId(int $marketId): array
     {
+        $optionColumn = $this->optionColumn();
+        $sharesColumn = $this->sharesColumn();
         $statement = $this->connection()->prepare(
-            'SELECT t.*, mo.label AS option_label,
+            "SELECT t.*,
+                    t.{$optionColumn} AS option_id,
+                    t.{$sharesColumn} AS shares_amount,
+                    mo.label AS option_label,
                     COALESCE(pr.display_name, pr.username, u.email) AS user_name
              FROM trades t
-             INNER JOIN market_options mo ON mo.id = t.option_id
+             INNER JOIN market_options mo ON mo.id = t.{$optionColumn}
              INNER JOIN users u ON u.id = t.user_id
              LEFT JOIN profiles pr ON pr.user_id = u.id
              WHERE t.market_id = :market_id
-             ORDER BY t.created_at DESC, t.id DESC'
+             ORDER BY t.created_at DESC, t.id DESC"
         );
         $statement->execute(['market_id' => $marketId]);
 
