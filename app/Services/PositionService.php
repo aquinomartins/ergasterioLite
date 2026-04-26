@@ -15,6 +15,7 @@ use App\Repositories\TradeRepository;
 use App\Repositories\UserBalanceRepository;
 use DomainException;
 use PDO;
+use Throwable;
 
 final class PositionService
 {
@@ -25,6 +26,7 @@ final class PositionService
     private TradeRepository $trades;
     private UserBalanceRepository $balances;
     private MarketService $marketService;
+    private ?bool $userBalancesEnabled = null;
 
     public function __construct(?PDO $pdo = null)
     {
@@ -89,10 +91,12 @@ final class PositionService
             throw new DomainException('A opção selecionada não pertence ao mercado.');
         }
 
-        $balance = $this->ensureUserBalance($userId);
+        if ($this->isUserBalanceEnabled()) {
+            $balance = $this->ensureUserBalance($userId);
 
-        if ((float) $balance['balance'] < $sharesAmount) {
-            throw new DomainException('Saldo insuficiente para concluir a participação.');
+            if ((float) $balance['balance'] < $sharesAmount) {
+                throw new DomainException('Saldo insuficiente para concluir a participação.');
+            }
         }
     }
 
@@ -126,6 +130,10 @@ final class PositionService
 
     public function updateUserBalance(int $userId, float $amount): void
     {
+        if (! $this->isUserBalanceEnabled()) {
+            return;
+        }
+
         $success = $this->balances->decreaseBalance($userId, $amount);
 
         if (! $success) {
@@ -152,6 +160,10 @@ final class PositionService
 
     public function getUserBalance(int $userId): float
     {
+        if (! $this->isUserBalanceEnabled()) {
+            return 0.0;
+        }
+
         $balance = $this->ensureUserBalance($userId);
 
         return (float) $balance['balance'];
@@ -173,5 +185,21 @@ final class PositionService
         $this->balances->create(new UserBalance(null, $userId, 1000.00));
 
         return $this->balances->getByUserId($userId) ?? ['balance' => 1000.00];
+    }
+
+    private function isUserBalanceEnabled(): bool
+    {
+        if ($this->userBalancesEnabled !== null) {
+            return $this->userBalancesEnabled;
+        }
+
+        try {
+            $statement = $this->pdo->query("SHOW TABLES LIKE 'user_balances'");
+            $this->userBalancesEnabled = $statement !== false && $statement->fetch() !== false;
+        } catch (Throwable $exception) {
+            $this->userBalancesEnabled = false;
+        }
+
+        return $this->userBalancesEnabled;
     }
 }
