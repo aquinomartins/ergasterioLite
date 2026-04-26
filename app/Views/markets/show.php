@@ -98,6 +98,10 @@ $trades = $trades ?? [];
         </div>
     <?php endif; ?>
 
+    <?php if ($isAuthenticated && $userBalance !== null): ?>
+        <div class="balance-pill">Saldo disponível: <strong>R$ <?= number_format((float) $userBalance, 2, ',', '.') ?></strong></div>
+    <?php endif; ?>
+
     <?php if ($status !== 'open'): ?>
         <p class="helper-text">Participações ficam disponíveis apenas quando o mercado está aberto.</p>
     <?php elseif (! $isAuthenticated): ?>
@@ -106,7 +110,6 @@ $trades = $trades ?? [];
             <a href="/login">Entrar</a>.
         </p>
     <?php else: ?>
-        <div class="balance-pill">Saldo disponível: <strong>R$ <?= number_format((float) ($userBalance ?? 0), 2, ',', '.') ?></strong></div>
         <form method="POST" action="/markets/<?= (int) $market['id'] ?>/positions" class="form-grid" data-position-form>
             <?= Csrf::input() ?>
             <label>
