@@ -179,6 +179,24 @@ final class MarketRepository
         return $statement->fetchAll();
     }
 
+
+    public function getMarketWithOptions(int $id): ?array
+    {
+        $market = $this->findById($id);
+
+        if ($market === null) {
+            return null;
+        }
+
+        $statement = $this->connection()->prepare(
+            'SELECT * FROM market_options WHERE market_id = :market_id ORDER BY sort_order ASC, id ASC'
+        );
+        $statement->execute(['market_id' => $id]);
+        $market['options'] = $statement->fetchAll();
+
+        return $market;
+    }
+
     public function slugExists(string $slug): bool
     {
         $statement = $this->connection()->prepare('SELECT id FROM markets WHERE slug = :slug LIMIT 1');
