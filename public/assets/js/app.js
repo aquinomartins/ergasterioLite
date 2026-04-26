@@ -86,3 +86,39 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshOptionIndexes();
   }
 });
+
+(() => {
+  const form = document.querySelector('[data-position-form]');
+  if (!form) return;
+
+  const optionSelect = form.querySelector('[data-position-option]');
+  const sharesInput = form.querySelector('[data-position-shares]');
+  const preview = form.querySelector('[data-position-preview]');
+
+  const parse = (value) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+  };
+
+  const updatePreview = () => {
+    if (!optionSelect || !sharesInput || !preview) return;
+    const selected = optionSelect.selectedOptions[0];
+    const shares = parse(sharesInput.value);
+    if (!selected || !selected.value || shares <= 0) {
+      preview.textContent = 'Escolha uma opção e uma quantidade para visualizar o impacto estimado da participação.';
+      return;
+    }
+
+    const currentWeight = parse(selected.getAttribute('data-current-weight'));
+    const rows = [...optionSelect.options].filter((item) => item.value !== '');
+    const totalWeight = rows.reduce((acc, item) => acc + parse(item.getAttribute('data-current-weight')), 0);
+    const projectedTotal = totalWeight + shares;
+    const projectedOptionWeight = currentWeight + shares;
+    const projectedProbability = projectedTotal > 0 ? (projectedOptionWeight / projectedTotal) * 100 : 0;
+
+    preview.textContent = `Custo estimado: ${shares.toFixed(2)} créditos. Probabilidade projetada da opção: ${projectedProbability.toFixed(2)}%.`;
+  };
+
+  optionSelect?.addEventListener('change', updatePreview);
+  sharesInput?.addEventListener('input', updatePreview);
+})();

@@ -7,6 +7,8 @@ $snapshots = $market['snapshots'] ?? [];
 $canManageMarkets = $canManageMarkets ?? false;
 $errors = $errors ?? [];
 $status = (string) ($market['status'] ?? 'draft');
+$userBalance = $userBalance ?? null;
+$trades = $trades ?? [];
 ?>
 <section class="card detail-hero market-detail-hero">
     <div class="status-row">
@@ -78,6 +80,65 @@ $status = (string) ($market['status'] ?? 'draft');
     </div>
 </section>
 
+
+<section class="card participation-card">
+    <div class="section-heading compact-heading market-inline-heading">
+        <div>
+            <h2>Participar do mercado</h2>
+            <p>Cada participação aumenta o peso da opção escolhida e recalcula as probabilidades.</p>
+        </div>
+    </div>
+
+    <?php if (! empty($errors['position'])): ?>
+        <div class="inline-errors">
+            <?php foreach ($errors['position'] as $message): ?>
+                <small class="error-text"><?= htmlspecialchars((string) $message, ENT_QUOTES, 'UTF-8') ?></small>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($status !== 'open'): ?>
+        <p class="helper-text">Participações ficam disponíveis apenas quando o mercado está aberto.</p>
+    <?php else: ?>
+        <div class="balance-pill">Saldo disponível: <strong>R$ <?= number_format((float) ($userBalance ?? 0), 2, ',', '.') ?></strong></div>
+        <form method="POST" action="/markets/<?= (int) $market['id'] ?>/positions" class="form-grid" data-position-form>
+            <?= Csrf::input() ?>
+            <label>
+                <span>Opção</span>
+                <select name="option_id" required data-position-option>
+                    <option value="">Selecione</option>
+                    <?php foreach ($options as $option): ?>
+                        <option
+                            value="<?= (int) $option['id'] ?>"
+                            data-current-probability="<?= (float) $option['probability_value'] ?>"
+                            data-current-weight="<?= (float) $option['weight_value'] ?>"
+                        >
+                            <?= htmlspecialchars((string) $option['label'], ENT_QUOTES, 'UTF-8') ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <?php foreach ($errors['option_id'] ?? [] as $message): ?>
+                    <small class="error-text"><?= htmlspecialchars((string) $message, ENT_QUOTES, 'UTF-8') ?></small>
+                <?php endforeach; ?>
+            </label>
+
+            <label>
+                <span>Quantidade de shares</span>
+                <input type="number" name="shares_amount" min="0.01" step="0.01" required placeholder="Ex: 25" data-position-shares>
+                <?php foreach ($errors['shares_amount'] ?? [] as $message): ?>
+                    <small class="error-text"><?= htmlspecialchars((string) $message, ENT_QUOTES, 'UTF-8') ?></small>
+                <?php endforeach; ?>
+            </label>
+
+            <p class="helper-text" data-position-preview>
+                Escolha uma opção e uma quantidade para visualizar o impacto estimado da participação.
+            </p>
+
+            <button type="submit" class="button">Participar agora</button>
+        </form>
+    <?php endif; ?>
+</section>
+
 <section class="grid-two market-detail-grid">
     <article class="card">
         <div class="section-heading compact-heading market-inline-heading">
@@ -109,6 +170,28 @@ $status = (string) ($market['status'] ?? 'draft');
                     </article>
                 <?php endforeach; ?>
             </div>
+        <?php endif; ?>
+    </article>
+
+    <article class="card">
+        <div class="section-heading compact-heading market-inline-heading">
+            <div>
+                <h2>Histórico de trades</h2>
+                <p>Últimas participações registradas neste mercado.</p>
+            </div>
+        </div>
+
+        <?php if ($trades === []): ?>
+            <div class="empty-state inline-state"><p>Nenhuma participação registrada ainda.</p></div>
+        <?php else: ?>
+            <ul class="trade-list">
+                <?php foreach (array_slice($trades, 0, 8) as $trade): ?>
+                    <li>
+                        <span><?= htmlspecialchars((string) $trade['user_name'], ENT_QUOTES, 'UTF-8') ?> · <?= htmlspecialchars((string) $trade['option_label'], ENT_QUOTES, 'UTF-8') ?></span>
+                        <strong><?= number_format((float) $trade['shares_amount'], 2, ',', '.') ?> shares</strong>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
         <?php endif; ?>
     </article>
 

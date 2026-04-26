@@ -1,0 +1,167 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Core\Database;
+use App\Models\Position;
+use App\Models\Trade;
+use App\Models\UserBalance;
+use App\Repositories\MarketOptionRepository;
+use App\Repositories\MarketRepository;
+use App\Repositories\PositionRepository;
+use App\Repositories\TradeRepository;
+use App\Repositories\UserBalanceRepository;
+use DomainException;
+use PDO;
+
+final class PositionService
+{
+    private PDO $pdo;
+    private MarketRepository $markets;
+    private MarketOptionRepository $options;
+    private PositionRepository $positions;
+    private TradeRepository $trades;
+    private UserBalanceRepository $balances;
+    private MarketService $marketService;
+
+    public function __construct(?PDO $pdo = null)
+    {
+        $this->pdo = $pdo ?? Database::connection();
+        $this->markets = new MarketRepository($this->pdo);
+        $this->options = new MarketOptionRepository($this->pdo);
+        $this->positions = new PositionRepository($this->pdo);
+        $this->trades = new TradeRepository($this->pdo);
+        $this->balances = new UserBalanceRepository($this->pdo);
+        $this->marketService = new MarketService($this->pdo);
+    }
+
+    public function openPosition(int $userId, int $marketId, int $optionId, float $sharesAmount): array
+    {
+        $this->validateParticipation($userId, $marketId, $optionId, $sharesAmount);
+
+        $this->pdo->beginTransaction();
+
+        try {
+            $this->updateUserBalance($userId, $sharesAmount);
+
+            $this->positions->create(new Position(null, $userId, $marketId, $optionId, $sharesAmount));
+            $this->registerTrade($userId, $marketId, $optionId, $sharesAmount);
+
+            $this->updateMarketWeights($marketId, $optionId, $sharesAmount);
+            $options = $this->recalculateProbabilities($marketId);
+            $this->createSnapshot($marketId);
+
+            $this->pdo->commit();
+
+            return $options;
+        } catch (\Throwable $exception) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $exception;
+        }
+    }
+
+    public function validateParticipation(int $userId, int $marketId, int $optionId, float $sharesAmount): void
+    {
+        if ($userId <= 0) {
+            throw new DomainException('Faça login para participar.');
+        }
+
+        if ($sharesAmount <= 0) {
+            throw new DomainException('Informe uma quantidade válida para participar.');
+        }
+
+        $market = $this->markets->findById($marketId);
+
+        if ($market === null) {
+            throw new DomainException('Mercado não encontrado.');
+        }
+
+        if ((string) $market['status'] !== 'open') {
+            throw new DomainException('Não é possível participar de mercados fechados ou em rascunho.');
+        }
+
+        $option = $this->options->findById($optionId);
+
+        if ($option === null || (int) $option['market_id'] !== $marketId) {
+            throw new DomainException('A opção selecionada não pertence ao mercado.');
+        }
+
+        $balance = $this->ensureUserBalance($userId);
+
+        if ((float) $balance['balance'] < $sharesAmount) {
+            throw new DomainException('Saldo insuficiente para concluir a participação.');
+        }
+    }
+
+    public function updateMarketWeights(int $marketId, int $optionId, float $sharesAmount): void
+    {
+        $options = $this->options->getByMarketId($marketId);
+
+        foreach ($options as &$option) {
+            $weight = (float) $option['weight_value'];
+
+            if ((int) $option['id'] === $optionId) {
+                $weight += $sharesAmount;
+            }
+
+            $option['weight_value'] = number_format($weight, 4, '.', '');
+        }
+        unset($option);
+
+        $this->options->updateWeightsAndProbabilities($options);
+    }
+
+    public function recalculateProbabilities(int $marketId): array
+    {
+        return $this->marketService->recalculateProbabilities($marketId);
+    }
+
+    public function registerTrade(int $userId, int $marketId, int $optionId, float $sharesAmount): void
+    {
+        $this->trades->create(new Trade(null, $userId, $marketId, $optionId, $sharesAmount));
+    }
+
+    public function updateUserBalance(int $userId, float $amount): void
+    {
+        $success = $this->balances->decreaseBalance($userId, $amount);
+
+        if (! $success) {
+            throw new DomainException('Não foi possível debitar o saldo. Verifique se você possui saldo suficiente.');
+        }
+    }
+
+    public function createSnapshot(int $marketId): void
+    {
+        $this->marketService->createSnapshot($marketId);
+    }
+
+    public function getUserBalance(int $userId): float
+    {
+        $balance = $this->ensureUserBalance($userId);
+
+        return (float) $balance['balance'];
+    }
+
+    public function getMarketTrades(int $marketId): array
+    {
+        return $this->trades->getByMarketId($marketId);
+    }
+
+    private function ensureUserBalance(int $userId): array
+    {
+        $balance = $this->balances->getByUserId($userId);
+
+        if ($balance !== null) {
+            return $balance;
+        }
+
+        $this->balances->create(new UserBalance(null, $userId, 1000.00));
+
+        return $this->balances->getByUserId($userId) ?? ['balance' => 1000.00];
+    }
+}
