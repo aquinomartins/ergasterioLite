@@ -5,6 +5,7 @@ $market = $market ?? [];
 $options = $market['options'] ?? [];
 $snapshots = $market['snapshots'] ?? [];
 $canManageMarkets = $canManageMarkets ?? false;
+$isAuthenticated = $isAuthenticated ?? false;
 $errors = $errors ?? [];
 $status = (string) ($market['status'] ?? 'draft');
 $userBalance = $userBalance ?? null;
@@ -99,6 +100,11 @@ $trades = $trades ?? [];
 
     <?php if ($status !== 'open'): ?>
         <p class="helper-text">Participações ficam disponíveis apenas quando o mercado está aberto.</p>
+    <?php elseif (! $isAuthenticated): ?>
+        <p class="helper-text">
+            Entre para participar deste mercado.
+            <a href="/login">Entrar</a>.
+        </p>
     <?php else: ?>
         <div class="balance-pill">Saldo disponível: <strong>R$ <?= number_format((float) ($userBalance ?? 0), 2, ',', '.') ?></strong></div>
         <form method="POST" action="/markets/<?= (int) $market['id'] ?>/positions" class="form-grid" data-position-form>

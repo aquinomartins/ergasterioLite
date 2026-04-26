@@ -45,13 +45,11 @@ final class PositionService
 
         try {
             $this->updateUserBalance($userId, $sharesAmount);
-
-            $this->positions->create(new Position(null, $userId, $marketId, $optionId, $sharesAmount));
+            $this->createOrUpdatePosition($userId, $marketId, $optionId, $sharesAmount);
             $this->registerTrade($userId, $marketId, $optionId, $sharesAmount);
 
             $this->updateMarketWeights($marketId, $optionId, $sharesAmount);
             $options = $this->recalculateProbabilities($marketId);
-            $this->createSnapshot($marketId);
 
             $this->pdo->commit();
 
@@ -138,6 +136,18 @@ final class PositionService
     public function createSnapshot(int $marketId): void
     {
         $this->marketService->createSnapshot($marketId);
+    }
+
+    private function createOrUpdatePosition(int $userId, int $marketId, int $optionId, float $sharesAmount): void
+    {
+        $existingPosition = $this->positions->findByUserMarketOption($userId, $marketId, $optionId);
+
+        if ($existingPosition === null) {
+            $this->positions->create(new Position(null, $userId, $marketId, $optionId, $sharesAmount));
+            return;
+        }
+
+        $this->positions->increaseShares((int) $existingPosition['id'], $sharesAmount);
     }
 
     public function getUserBalance(int $userId): float
