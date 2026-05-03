@@ -11,6 +11,7 @@ use App\Requests\StorePositionRequest;
 use App\Services\MarketService;
 use App\Services\PositionService;
 use DomainException;
+use PDOException;
 use Throwable;
 
 final class PositionController extends Controller
@@ -57,9 +58,19 @@ final class PositionController extends Controller
             Session::set('errors', ['position' => [$exception->getMessage()]]);
             Session::flash('error', $exception->getMessage());
         } catch (Throwable $exception) {
+            $sqlCode = null;
+
+            if ($exception instanceof PDOException) {
+                $sqlCode = $exception->errorInfo[0] ?? $exception->errorInfo[1] ?? null;
+            } elseif ($exception->getPrevious() instanceof PDOException) {
+                $previous = $exception->getPrevious();
+                $sqlCode = $previous->errorInfo[0] ?? $previous->errorInfo[1] ?? null;
+            }
+
             error_log(sprintf(
-                'PositionController::store failed: %s | context=%s',
+                'PositionController::store failed: %s | sql_code=%s | context=%s',
                 $exception->getMessage(),
+                $sqlCode ?? 'n/a',
                 json_encode([
                     'user_id' => $userId,
                     'market_id' => (int) $id,
