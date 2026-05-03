@@ -39,6 +39,13 @@ spl_autoload_register(static function (string $class): void {
 
 $config = require BASE_PATH . '/app/Config/config.php';
 
+error_log(sprintf(
+    'App bootstrap DB config loaded: host=%s port=%d name=%s',
+    (string) $config['database']['host'],
+    (int) $config['database']['port'],
+    (string) $config['database']['name']
+));
+
 Session::start($config['session']);
 Database::initialize($config['database']);
 Csrf::boot();
