@@ -57,6 +57,17 @@ final class PositionController extends Controller
             Session::set('errors', ['position' => [$exception->getMessage()]]);
             Session::flash('error', $exception->getMessage());
         } catch (Throwable $exception) {
+            error_log(sprintf(
+                'PositionController::store failed: %s | context=%s',
+                $exception->getMessage(),
+                json_encode([
+                    'user_id' => $userId,
+                    'market_id' => (int) $id,
+                    'option_id' => (int) $data['option_id'],
+                    'shares_amount' => (float) $data['shares_amount'],
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            ));
+
             Session::set('errors', ['position' => ['Não foi possível registrar a participação agora. Tente novamente.']]);
             Session::flash('error', 'Ocorreu um erro ao processar sua participação.');
         }
