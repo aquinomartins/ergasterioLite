@@ -50,8 +50,9 @@ final class PositionService
             $this->createOrUpdatePosition($userId, $marketId, $optionId, $sharesAmount);
             $this->registerTrade($userId, $marketId, $optionId, $sharesAmount);
 
-            $this->updateMarketWeights($marketId, $optionId, $sharesAmount);
+            $this->options->incrementWeight($optionId, $sharesAmount);
             $options = $this->recalculateProbabilities($marketId);
+            $this->createSnapshot($marketId);
 
             $this->pdo->commit();
 
@@ -85,9 +86,7 @@ final class PositionService
             throw new DomainException('Não é possível participar de mercados fechados ou em rascunho.');
         }
 
-        $option = $this->options->findById($optionId);
-
-        if ($option === null || (int) $option['market_id'] !== $marketId) {
+        if (! $this->options->belongsToMarket($optionId, $marketId)) {
             throw new DomainException('A opção selecionada não pertence ao mercado.');
         }
 
@@ -98,24 +97,6 @@ final class PositionService
                 throw new DomainException('Saldo insuficiente para concluir a participação.');
             }
         }
-    }
-
-    public function updateMarketWeights(int $marketId, int $optionId, float $sharesAmount): void
-    {
-        $options = $this->options->getByMarketId($marketId);
-
-        foreach ($options as &$option) {
-            $weight = (float) $option['weight_value'];
-
-            if ((int) $option['id'] === $optionId) {
-                $weight += $sharesAmount;
-            }
-
-            $option['weight_value'] = number_format($weight, 4, '.', '');
-        }
-        unset($option);
-
-        $this->options->updateWeightsAndProbabilities($options);
     }
 
     public function recalculateProbabilities(int $marketId): array

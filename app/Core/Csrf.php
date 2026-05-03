@@ -27,12 +27,12 @@ final class Csrf
 
     public static function input(): string
     {
-        return '<input type="hidden" name="_token" value="' . htmlspecialchars(self::token(), ENT_QUOTES, 'UTF-8') . '">';
+        return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(self::token(), ENT_QUOTES, 'UTF-8') . '">';
     }
 
     public static function verifyFromRequest(): bool
     {
-        $token = $_POST['_token'] ?? '';
+        $token = $_POST['csrf_token'] ?? ($_POST['_token'] ?? '');
 
         return is_string($token) && hash_equals((string) Session::get(self::KEY, ''), $token);
     }
