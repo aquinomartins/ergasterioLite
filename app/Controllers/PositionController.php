@@ -11,6 +11,7 @@ use App\Requests\StorePositionRequest;
 use App\Services\MarketService;
 use App\Services\PositionService;
 use DomainException;
+use JsonException;
 use Throwable;
 
 final class PositionController extends Controller
@@ -57,10 +58,33 @@ final class PositionController extends Controller
             Session::set('errors', ['position' => [$exception->getMessage()]]);
             Session::flash('error', $exception->getMessage());
         } catch (Throwable $exception) {
+            $this->logParticipationError($exception, [
+                'user_id' => $userId,
+                'market_id' => (int) $id,
+                'option_id' => (int) ($data['option_id'] ?? 0),
+                'shares_amount' => (float) ($data['shares_amount'] ?? 0),
+                'path' => $_SERVER['REQUEST_URI'] ?? '',
+            ]);
             Session::set('errors', ['position' => ['Não foi possível registrar a participação agora. Tente novamente.']]);
             Session::flash('error', 'Ocorreu um erro ao processar sua participação.');
         }
 
         $this->redirectTo($redirectPath);
+    }
+
+    private function logParticipationError(Throwable $exception, array $context): void
+    {
+        try {
+            $contextJson = json_encode($context, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        } catch (JsonException $jsonException) {
+            $contextJson = '{}';
+        }
+
+        error_log(sprintf(
+            '[position.store] %s | context=%s | exception=%s',
+            $exception->getMessage(),
+            $contextJson,
+            $exception->getTraceAsString()
+        ));
     }
 }
