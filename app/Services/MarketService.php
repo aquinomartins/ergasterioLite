@@ -261,13 +261,6 @@ final class MarketService
 
         $this->options->updateWeightsAndProbabilities($options);
 
-        try {
-            $this->createSnapshot($marketId);
-        } catch (\Throwable $exception) {
-            // Snapshot é complementar: não deve impedir a participação quando a tabela
-            // ainda não existir em ambientes com migrações parciais.
-        }
-
         return $this->options->getByMarketId($marketId);
     }
 

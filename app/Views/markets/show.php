@@ -164,7 +164,7 @@ foreach ($myPayouts as $myPayout) {
     <?php elseif (! $isAuthenticated): ?>
         <p class="helper-text">
             Entre para participar deste mercado.
-            <a href="/login">Entrar</a>.
+            <a href="/login">/login</a>.
         </p>
     <?php else: ?>
         <form method="POST" action="/markets/<?= (int) $market['id'] ?>/positions" class="form-grid" data-position-form>
@@ -190,7 +190,7 @@ foreach ($myPayouts as $myPayout) {
 
             <label>
                 <span>Quantidade de shares</span>
-                <input type="number" name="shares_amount" min="0.01" step="0.01" required placeholder="Ex: 25" data-position-shares>
+                <input type="number" name="shares_amount" min="1" step="1" value="1" required placeholder="Ex: 1" data-position-shares>
                 <?php foreach ($errors['shares_amount'] ?? [] as $message): ?>
                     <small class="error-text"><?= htmlspecialchars((string) $message, ENT_QUOTES, 'UTF-8') ?></small>
                 <?php endforeach; ?>

@@ -67,22 +67,33 @@ final class PositionController extends Controller
                 $sqlCode = $previous->errorInfo[0] ?? $previous->errorInfo[1] ?? null;
             }
 
-            error_log(sprintf(
-                'PositionController::store failed: %s | sql_code=%s | context=%s',
-                $exception->getMessage(),
-                $sqlCode ?? 'n/a',
-                json_encode([
-                    'user_id' => $userId,
-                    'market_id' => (int) $id,
-                    'option_id' => (int) $data['option_id'],
-                    'shares_amount' => (float) $data['shares_amount'],
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-            ));
+            $this->logPositionError($exception->getMessage(), $sqlCode, [
+                'user_id' => $userId,
+                'market_id' => (int) $id,
+                'option_id' => (int) $data['option_id'],
+                'shares_amount' => (float) $data['shares_amount'],
+            ]);
 
             Session::set('errors', ['position' => ['Não foi possível registrar a participação agora. Tente novamente.']]);
             Session::flash('error', 'Ocorreu um erro ao processar sua participação.');
         }
 
         $this->redirectTo($redirectPath);
+    }
+
+    private function logPositionError(string $message, $sqlCode, array $context): void
+    {
+        $line = sprintf(
+            "[%s] PositionController::store failed: %s | sql_code=%s | context=%s\n",
+            date('Y-m-d H:i:s'),
+            $message,
+            (string) ($sqlCode ?? 'n/a'),
+            (string) json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
+
+        $logFile = dirname(__DIR__, 2) . '/storage/logs/app.log';
+        if (@file_put_contents($logFile, $line, FILE_APPEND) === false) {
+            error_log(trim($line));
+        }
     }
 }

@@ -101,4 +101,41 @@ final class MarketOptionRepository
 
         return $option ?: null;
     }
+
+    public function belongsToMarket(int $optionId, int $marketId): bool
+    {
+        $statement = $this->connection()->prepare(
+            'SELECT 1 FROM market_options WHERE id = :id AND market_id = :market_id LIMIT 1'
+        );
+        $statement->execute([
+            'id' => $optionId,
+            'market_id' => $marketId,
+        ]);
+
+        return (bool) $statement->fetchColumn();
+    }
+
+    public function incrementWeight(int $optionId, float $amount): bool
+    {
+        $statement = $this->connection()->prepare(
+            'UPDATE market_options SET weight_value = weight_value + :amount, updated_at = NOW() WHERE id = :id'
+        );
+
+        return $statement->execute([
+            'id' => $optionId,
+            'amount' => $amount,
+        ]);
+    }
+
+    public function updateProbability(int $optionId, float $probability): bool
+    {
+        $statement = $this->connection()->prepare(
+            'UPDATE market_options SET probability_value = :probability, updated_at = NOW() WHERE id = :id'
+        );
+
+        return $statement->execute([
+            'id' => $optionId,
+            'probability' => $probability,
+        ]);
+    }
 }
