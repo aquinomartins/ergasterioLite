@@ -1,37 +1,28 @@
 <?php
-$s = $state['session'] ?? [];
-$pool = $state['pool'] ?? [];
-$ranking = $state['ranking'] ?? [];
-$feed = $state['feed'] ?? [];
-
 $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 $money = static fn($v): string => 'R$ ' . number_format((float)$v, 2, ',', '.');
+$btcFmt = static fn($v): string => number_format((float)$v, 4, ',', '.');
 
-$teamId = (int)($team['id'] ?? 0);
-$alreadyActed = false;
-foreach (($state['actions'] ?? []) as $action) {
-    if ((int)($action['team_id'] ?? 0) === $teamId && (int)($action['round_number'] ?? -1) === (int)($s['current_round'] ?? 0)) {
-        $alreadyActed = true;
-        break;
-    }
+$lastAction = null;
+foreach ($events as $event) {
+    if ((int)($event['team_id'] ?? 0) === (int)($team['id'] ?? 0)) { $lastAction = $event; break; }
 }
 
 $actionMeta = [
-    'deposit_nft' => ['label' => 'Entrar na Piscina', 'copy' => 'Você entrega uma NFT ao organismo coletivo, recebe BTC e ganha uma cota.', 'quantity' => false],
-    'withdraw_nft_btc' => ['label' => 'Retirar NFT com BTC', 'copy' => 'Você recupera um ativo, mas reduz a profundidade da piscina.', 'quantity' => false],
-    'withdraw_nft_cash' => ['label' => 'Retirar NFT com dinheiro', 'copy' => 'Você usa caixa para sair da exposição coletiva.', 'quantity' => false],
-    'buy_btc' => ['label' => 'Comprar BTC', 'copy' => 'Você troca caixa por poder de retirada.', 'quantity' => true],
-    'sell_btc' => ['label' => 'Vender BTC', 'copy' => 'Você transforma liquidez em caixa imediato.', 'quantity' => true],
-    'sell_nft' => ['label' => 'Vender NFT em mãos', 'copy' => 'Você vende um ativo bruto para reforçar o caixa.', 'quantity' => false],
-    'sell_share' => ['label' => 'Vender cota', 'copy' => 'Você reduz sua participação no organismo coletivo.', 'quantity' => false],
-    'pass' => ['label' => 'Passar a vez', 'copy' => 'Você observa o mercado sem se mover.', 'quantity' => false],
+    'deposit_nft' => ['label' => 'Entrar na Piscina', 'desc' => 'Deposita 1 NFT na piscina.', 'effect' => ['-1 NFT em mãos', '+' . $btcFmt($session['btc_deposit_reward'] ?? 0) . ' BTC', '+1 cota', '+1 NFT na piscina']],
+    'withdraw_nft_btc' => ['label' => 'Retirar NFT com BTC', 'desc' => 'Retira 1 NFT usando BTC.', 'effect' => ['-' . $btcFmt($session['btc_withdraw_cost'] ?? 0) . ' BTC', '+1 NFT em mãos', '-1 NFT na piscina']],
+    'withdraw_nft_cash' => ['label' => 'Retirar NFT com dinheiro', 'desc' => 'Retira 1 NFT usando caixa.', 'effect' => ['-' . $money($session['cash_withdraw_cost'] ?? 0), '+1 NFT em mãos', '-1 NFT na piscina']],
+    'buy_btc' => ['label' => 'Comprar BTC', 'desc' => 'Compra BTC com caixa.', 'effect' => ['Caixa - (quantidade × preço de compra)', 'BTC + quantidade'], 'quantity' => true],
+    'sell_btc' => ['label' => 'Vender BTC', 'desc' => 'Vende BTC e recebe caixa.', 'effect' => ['BTC - quantidade', 'Caixa + (quantidade × preço de venda)'], 'quantity' => true],
+    'sell_nft' => ['label' => 'Vender NFT em mãos', 'desc' => 'Vende 1 NFT em mãos.', 'effect' => ['-1 NFT em mãos', '+' . $money($session['nft_sell_price'] ?? 0)]],
+    'sell_share' => ['label' => 'Vender cota', 'desc' => 'Vende 1 cota da piscina.', 'effect' => ['-1 cota', '+' . $money($session['share_sell_price'] ?? 0), '-1 cota total da piscina']],
+    'pass' => ['label' => 'Passar a vez', 'desc' => 'Não realiza movimentação econômica.', 'effect' => ['Sem alteração de saldo']],
 ];
 ?>
-
-<div class="liquidity-shell" id="liquidity-team-dashboard" data-session-id="<?= (int)($s['id'] ?? 0) ?>">
+<div class="liquidity-shell" id="liquidity-team-dashboard">
     <header class="liquidity-header">
-        <h1><?= $e($s['name'] ?? 'Sessão') ?></h1>
-        <p>Rodada <strong><?= (int)($s['current_round'] ?? 0) ?></strong> / <?= (int)($s['total_rounds'] ?? 0) ?> · Status: <strong><?= $e($s['status'] ?? '-') ?></strong></p>
+        <h1><?= $e($session['name'] ?? 'Sessão') ?></h1>
+        <p>Rodada <strong><?= (int)$currentRound ?></strong> / <?= (int)($session['total_rounds'] ?? 0) ?> · Status: <strong><?= $e($session['status'] ?? '-') ?></strong></p>
     </header>
 
     <section class="vitality-grid">
@@ -39,83 +30,43 @@ $actionMeta = [
             <h2>Meus recursos</h2>
             <ul>
                 <li>Caixa: <?= $money($team['cash_balance'] ?? 0) ?></li>
-                <li>BTC: <?= number_format((float)($team['btc_balance'] ?? 0), 4, ',', '.') ?></li>
+                <li>BTC: <?= $btcFmt($team['btc_balance'] ?? 0) ?></li>
                 <li>NFTs em mãos: <?= (int)($team['nft_balance'] ?? 0) ?></li>
-                <li>Cotas da piscina: <?= number_format((float)($team['share_balance'] ?? 0), 4, ',', '.') ?></li>
-                <li>Score parcial: <?= number_format((float)($team['score'] ?? 0), 2, ',', '.') ?></li>
+                <li>Cotas da piscina: <?= (int)($team['pool_shares'] ?? 0) ?></li>
             </ul>
+            <p class="payoff-badge">Payoff atual: <strong><?= $money($partialScore ?? 0) ?></strong></p>
         </article>
 
-        <article class="vitality-card pool-card <?= $e('pool-status-' . ($pool['status'] ?? 'stable')) ?>" data-pool-state>
+        <article class="vitality-card pool-card <?= $e('pool-status-' . ($pool['status'] ?? 'stable')) ?>">
             <h2>Estado da Piscina</h2>
             <ul>
-                <li>NFTs depositadas: <span data-pool-nfts><?= (int)($pool['nft_reserve'] ?? 0) ?></span></li>
-                <li>Valor total bloqueado: <span data-pool-total><?= $money($pool['total_value_locked'] ?? 0) ?></span></li>
-                <li>Cotas emitidas: <span data-pool-shares><?= number_format((float)($pool['share_supply'] ?? 0), 4, ',', '.') ?></span></li>
-                <li>Rendimento por cota: <span data-pool-yield><?= number_format((float)($pool['yield_per_share'] ?? 0), 4, ',', '.') ?></span></li>
-                <li>Status visual: <strong data-pool-status><?= $e($pool['status'] ?? '-') ?></strong></li>
+                <li>NFTs na piscina: <span data-pool-nfts><?= (int)($pool['pool_nfts'] ?? 0) ?></span></li>
+                <li>Cotas totais: <span data-pool-shares><?= (int)($pool['total_shares'] ?? 0) ?></span></li>
+                <li>Valor total bloqueado: <span data-pool-total><?= $money($pool['total_value'] ?? 0) ?></span></li>
+                <li>Rendimento por cota: <span data-pool-yield><?= $money($pool['yield_per_share'] ?? 0) ?></span></li>
+                <li>Status: <strong data-pool-status><?= $e($pool['status'] ?? '-') ?></strong></li>
             </ul>
         </article>
     </section>
 
     <section class="vitality-card">
-        <h2>Decisão da Rodada</h2>
-        <?php if ($alreadyActed): ?>
+        <h2>Ações da rodada</h2>
+        <?php if ($hasActed): ?>
             <p class="warning-text">A decisão desta rodada já foi enviada. Aguarde o professor avançar para a próxima rodada.</p>
+            <?php if ($lastAction): ?><p><strong>Última ação:</strong> <?= $e($lastAction['description'] ?? '-') ?></p><?php endif; ?>
         <?php endif; ?>
         <div class="action-grid">
             <?php foreach ($actionMeta as $type => $meta): ?>
                 <form method="post" action="/liquidity/team/action" class="action-card" data-liquidity-action-form>
                     <?= \App\Core\Csrf::input() ?>
                     <input type="hidden" name="action_type" value="<?= $e($type) ?>">
-                    <h3><?= $e($meta['label']) ?></h3>
-                    <p><?= $e($meta['copy']) ?></p>
-                    <?php if ($meta['quantity']): ?>
-                        <label>Quantidade
-                            <input type="number" name="quantity" min="0.0001" step="0.0001" value="1" required <?= $alreadyActed ? 'disabled' : '' ?>>
-                        </label>
-                    <?php endif; ?>
-                    <button type="submit" <?= $alreadyActed ? 'disabled' : '' ?>>Enviar decisão</button>
+                    <h3><?= $e($meta['label']) ?></h3><p><?= $e($meta['desc']) ?></p>
+                    <div class="action-effect"><strong>Efeito esperado:</strong><ul><?php foreach ($meta['effect'] as $line): ?><li><?= $e($line) ?></li><?php endforeach; ?></ul></div>
+                    <?php if (!empty($meta['quantity'])): ?><label>Quantidade <input type="number" name="quantity" min="0.0001" step="0.0001" value="1" required <?= $hasActed ? 'disabled' : '' ?>></label><?php endif; ?>
+                    <button type="submit" <?= $hasActed ? 'disabled' : '' ?>><?= $e($meta['label']) ?></button>
                 </form>
             <?php endforeach; ?>
         </div>
-    </section>
-
-    <section class="vitality-grid">
-        <article class="vitality-card">
-            <h2>Feed Vivo</h2>
-            <ul class="feed-list" data-feed-list>
-                <?php foreach ($feed as $event): ?>
-                    <li><?= $e($event['event_type'] ?? 'evento') ?> — <?= $e($event['description'] ?? '') ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </article>
-
-        <article class="vitality-card">
-            <h2>Ranking Parcial</h2>
-            <table class="ranking-table" data-ranking-table>
-                <thead><tr><th>Posição</th><th>Equipe</th><th>Score parcial</th></tr></thead>
-                <tbody>
-                <?php foreach ($ranking as $i => $row): ?>
-                    <tr><td><?= $i + 1 ?></td><td><?= $e($row['name'] ?? 'Equipe') ?></td><td><?= number_format((float)($row['score'] ?? 0), 2, ',', '.') ?></td></tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-        </article>
-    </section>
-
-    <section class="vitality-card market-arena-card">
-        <h2>Mercados da Arena</h2>
-        <?php if (!empty($predictionMarkets)): ?>
-            <?php foreach ($predictionMarkets as $m): ?>
-                <div class="prediction-market-card">
-                    <strong><?= $e($m['question'] ?? '') ?></strong>
-                    <small>(<?= $e($m['status'] ?? '-') ?>)</small>
-                </div>
-            <?php endforeach; ?>
-        <?php else: ?>
-            <p>Mercados da Arena serão ativados na próxima fase.</p>
-        <?php endif; ?>
     </section>
 </div>
 <script src="/assets/js/liquidity-team.js"></script>
