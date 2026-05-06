@@ -60,7 +60,7 @@ final class RankingRepository
         return $this->incrementField($userId, 'total_markets_won', 1.0);
     }
 
-    public function updateReputationScore(int $userId, float $points): bool
+    public function incrementReputationScore(int $userId, float $points): bool
     {
         return $this->incrementField($userId, 'reputation_score', $points);
     }
@@ -72,7 +72,7 @@ final class RankingRepository
              FROM rankings r
              INNER JOIN users u ON u.id = r.user_id
              LEFT JOIN profiles p ON p.user_id = u.id
-             ORDER BY r.reputation_score DESC, r.total_payoff DESC, r.total_markets_won DESC
+             ORDER BY r.total_payoff DESC, r.reputation_score DESC, r.total_markets_won DESC
              LIMIT :lim'
         );
         $statement->bindValue(':lim', max(1, $limit), PDO::PARAM_INT);

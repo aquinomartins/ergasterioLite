@@ -79,4 +79,17 @@ final class PayoutRepository
 
         return $statement->fetchAll();
     }
+
+    public function existsForPosition(int $marketId, int $positionId): bool
+    {
+        $statement = $this->connection()->prepare(
+            'SELECT id FROM payouts WHERE market_id = :market_id AND position_id = :position_id LIMIT 1'
+        );
+        $statement->execute([
+            'market_id' => $marketId,
+            'position_id' => $positionId,
+        ]);
+
+        return (bool) $statement->fetchColumn();
+    }
 }

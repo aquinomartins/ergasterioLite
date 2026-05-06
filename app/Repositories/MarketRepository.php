@@ -231,4 +231,17 @@ final class MarketRepository
             'status' => 'resolved',
         ]);
     }
+
+    public function optionBelongsToMarket(int $optionId, int $marketId): bool
+    {
+        $statement = $this->connection()->prepare(
+            'SELECT id FROM market_options WHERE id = :option_id AND market_id = :market_id LIMIT 1'
+        );
+        $statement->execute([
+            'option_id' => $optionId,
+            'market_id' => $marketId,
+        ]);
+
+        return (bool) $statement->fetchColumn();
+    }
 }

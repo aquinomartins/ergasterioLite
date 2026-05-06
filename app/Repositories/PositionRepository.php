@@ -222,4 +222,14 @@ final class PositionRepository
         return (int) $statement->fetchColumn();
     }
 
+    public function getUsersWhoParticipatedInMarket(int $marketId): array
+    {
+        $statement = $this->connection()->prepare(
+            'SELECT DISTINCT user_id FROM positions WHERE market_id = :market_id'
+        );
+        $statement->execute(['market_id' => $marketId]);
+
+        return array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN));
+    }
+
 }

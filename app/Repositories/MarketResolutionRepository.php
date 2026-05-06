@@ -58,4 +58,14 @@ final class MarketResolutionRepository
 
         return $resolution ?: null;
     }
+
+    public function existsForMarket(int $marketId): bool
+    {
+        $statement = $this->connection()->prepare(
+            'SELECT id FROM market_resolutions WHERE market_id = :market_id LIMIT 1'
+        );
+        $statement->execute(['market_id' => $marketId]);
+
+        return (bool) $statement->fetchColumn();
+    }
 }

@@ -7,13 +7,13 @@ namespace App\Services;
 use App\Core\Database;
 use App\Models\Payout;
 use App\Policies\MarketPolicy;
-use App\Repositories\MarketOptionRepository;
 use App\Repositories\MarketRepository;
 use App\Repositories\MarketResolutionRepository;
 use App\Repositories\PayoutRepository;
 use App\Repositories\PositionRepository;
 use App\Repositories\RankingRepository;
 use App\Repositories\ReputationLogRepository;
+use App\Repositories\AdminActionRepository;
 use App\Repositories\UserBalanceRepository;
 use App\Repositories\UserRepository;
 use DomainException;
@@ -24,7 +24,6 @@ final class ResolutionService
 {
     private PDO $pdo;
     private MarketRepository $markets;
-    private MarketOptionRepository $options;
     private PositionRepository $positions;
     private MarketResolutionRepository $resolutions;
     private PayoutRepository $payouts;
@@ -32,13 +31,13 @@ final class ResolutionService
     private ReputationLogRepository $reputationLogs;
     private UserBalanceRepository $balances;
     private UserRepository $users;
+    private AdminActionRepository $adminActions;
     private MarketPolicy $policy;
 
     public function __construct(?PDO $pdo = null)
     {
         $this->pdo = $pdo ?? Database::connection();
         $this->markets = new MarketRepository($this->pdo);
-        $this->options = new MarketOptionRepository($this->pdo);
         $this->positions = new PositionRepository($this->pdo);
         $this->resolutions = new MarketResolutionRepository($this->pdo);
         $this->payouts = new PayoutRepository($this->pdo);
@@ -46,6 +45,7 @@ final class ResolutionService
         $this->reputationLogs = new ReputationLogRepository($this->pdo);
         $this->balances = new UserBalanceRepository($this->pdo);
         $this->users = new UserRepository($this->pdo);
+        $this->adminActions = new AdminActionRepository($this->pdo);
         $this->policy = new MarketPolicy();
     }
 
@@ -78,7 +78,7 @@ final class ResolutionService
 
         $market = $this->requireMarket($marketId);
 
-        if ((string) $market['status'] === 'resolved' || $this->resolutions->findByMarketId($marketId) !== null) {
+        if ((string) $market['status'] === 'resolved' || $this->resolutions->existsForMarket($marketId)) {
             throw new DomainException('Este mercado já foi resolvido.');
         }
 
@@ -90,8 +90,7 @@ final class ResolutionService
             throw new DomainException('Apenas mercados abertos ou fechados podem ser resolvidos.');
         }
 
-        $option = $this->options->findById($winningOptionId);
-        if ($option === null || (int) $option['market_id'] !== $marketId) {
+        if (! $this->markets->optionBelongsToMarket($winningOptionId, $marketId)) {
             throw new DomainException('A opção vencedora não pertence ao mercado.');
         }
 
@@ -123,11 +122,6 @@ final class ResolutionService
 
     public function executePayouts(int $marketId, int $winningOptionId): void
     {
-        $existingPayouts = $this->payouts->getByMarketId($marketId);
-        if ($existingPayouts !== []) {
-            throw new DomainException('Já existem payouts para este mercado.');
-        }
-
         $winningPositions = $this->positions->getWinningPositions($marketId, $winningOptionId);
 
         foreach ($winningPositions as $position) {
@@ -140,11 +134,16 @@ final class ResolutionService
             $feeAmount = 0.0;
             $netAmount = $grossAmount;
 
+            $positionId = isset($position['id']) ? (int) $position['id'] : null;
+            if ($positionId !== null && $this->payouts->existsForPosition($marketId, $positionId)) {
+                continue;
+            }
+
             $this->payouts->create(new Payout(
                 null,
                 (int) $position['user_id'],
                 $marketId,
-                isset($position['id']) ? (int) $position['id'] : null,
+                $positionId,
                 $winningOptionId,
                 $shares,
                 $grossAmount,
@@ -161,14 +160,9 @@ final class ResolutionService
 
     public function updateRankingsAfterResolution(int $marketId, int $winningOptionId): void
     {
-        $participants = $this->positions->getByMarketId($marketId);
-        if ($participants === []) {
+        $participantIds = $this->positions->getUsersWhoParticipatedInMarket($marketId);
+        if ($participantIds === []) {
             return;
-        }
-
-        $participantsByUser = [];
-        foreach ($participants as $position) {
-            $participantsByUser[(int) $position['user_id']] = true;
         }
 
         $payoutsByUser = [];
@@ -177,23 +171,22 @@ final class ResolutionService
             $payoutsByUser[$userId] = ($payoutsByUser[$userId] ?? 0.0) + (float) $payout['net_amount'];
         }
 
-        foreach (array_keys($participantsByUser) as $userId) {
+        foreach ($participantIds as $userId) {
             $this->rankings->createIfNotExists($userId);
             $this->rankings->incrementMarketsParticipated($userId);
+            $this->rankings->incrementReputationScore($userId, 1.0);
+
+            if ($this->tableExists('reputation_logs')) {
+                $this->reputationLogs->create($userId, $marketId, 'market_participation', 1.0);
+            }
 
             if (isset($payoutsByUser[$userId]) && $payoutsByUser[$userId] > 0) {
                 $this->rankings->incrementPayoff($userId, $payoutsByUser[$userId]);
                 $this->rankings->incrementMarketsWon($userId);
-                $this->rankings->updateReputationScore($userId, 10.0);
+                $this->rankings->incrementReputationScore($userId, 10.0);
 
                 if ($this->tableExists('reputation_logs')) {
                     $this->reputationLogs->create($userId, $marketId, 'market_win', 10.0);
-                }
-            } else {
-                $this->rankings->updateReputationScore($userId, 1.0);
-
-                if ($this->tableExists('reputation_logs')) {
-                    $this->reputationLogs->create($userId, $marketId, 'market_participation', 1.0);
                 }
             }
         }
@@ -235,19 +228,8 @@ final class ResolutionService
             return;
         }
 
-        $statement = $this->pdo->prepare(
-            'INSERT INTO admin_actions (user_id, action, context_type, context_id, description, created_at)
-             VALUES (:user_id, :action, :context_type, :context_id, :description, NOW())'
-        );
-
         try {
-            $statement->execute([
-                'user_id' => $userId,
-                'action' => $action,
-                'context_type' => 'market',
-                'context_id' => $marketId,
-                'description' => $description,
-            ]);
+            $this->adminActions->create($userId, $action, 'market', $marketId, $description);
         } catch (Throwable $exception) {
             // ignora schemas diferentes
         }
