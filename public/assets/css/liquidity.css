@@ -29,3 +29,9 @@ body { background: #f8fafc; color: #0f172a; }
   .liquidity-shell { padding: 18px 12px 28px; }
   .vitality-grid { grid-template-columns: 1fr; }
 }
+.payoff-badge { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: #111827; color: #f9fafb; font-weight: 700; }
+.action-effect { margin: 10px 0; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 8px; }
+.action-effect ul { margin: 6px 0 0 18px; }
+.action-card label { display: block; margin-top: 10px; font-weight: 600; }
+.action-card input { width: 100%; margin-top: 4px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; }
+.warning-text { background: #fffbeb; border: 1px solid #f59e0b; padding: 10px; border-radius: 8px; }
