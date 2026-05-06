@@ -1,4 +1,25 @@
-body{background:#08111a;color:#e8eef4}.card{background:#103040;border:1px solid #22d3ee}
-.prediction-market-card{background:#0e2230;border:1px solid #2c7a9b;padding:10px;margin:10px 0;border-radius:8px}
-.prediction-option{padding:6px 8px;margin:4px 0;background:#122f42}
-.prediction-option.winner{border-left:4px solid #22c55e;background:#123b2a}
+body { background: #060d16; color: #e8eef4; }
+.liquidity-shell { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.liquidity-header h1, .projector-title { margin: 0 0 8px; font-size: 2rem; color: #baf7ff; }
+.liquidity-header p { color: #b8c7d6; }
+.vitality-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap: 16px; margin: 16px 0; }
+.vitality-card, .action-card { background: #0d2535; border: 1px solid #1e465f; border-radius: 12px; padding: 16px; }
+.pool-card { border-color: #2dc9d6; }
+.pool-status-empty { box-shadow: inset 0 0 0 1px #64748b; }
+.pool-status-tense { box-shadow: inset 0 0 0 1px #f59e0b; }
+.pool-status-stable { box-shadow: inset 0 0 0 1px #14b8a6; }
+.pool-status-critical { box-shadow: inset 0 0 0 1px #f97316; }
+.pool-status-collapsed { box-shadow: inset 0 0 0 1px #ef4444; }
+.action-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; }
+.action-card h3 { margin-top: 0; color: #c8f7ff; }
+.action-card button { margin-top: 8px; width: 100%; background: #11b7c9; color: #041218; border: none; padding: 10px; border-radius: 8px; font-weight: 600; }
+.action-card button[disabled] { opacity: .5; cursor: not-allowed; }
+.feed-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.feed-list li { border-bottom: 1px solid #1d374a; padding-bottom: 8px; color: #d7e2eb; }
+.ranking-table { width: 100%; border-collapse: collapse; }
+.ranking-table th, .ranking-table td { border-bottom: 1px solid #1d374a; padding: 8px; text-align: left; }
+.market-arena-card { border-color: #00bcd4; }
+.warning-text { color: #fbbf24; font-weight: 700; }
+.projector-layout { max-width: 1440px; }
+.projector-pool { font-size: 1.15rem; }
+.prediction-market-card { background: #0b1c29; border: 1px solid #2f6f90; border-radius: 10px; padding: 10px; margin-top: 8px; }
