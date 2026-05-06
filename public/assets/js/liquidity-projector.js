@@ -1,0 +1,1 @@
+const el=document.getElementById('projector'); if(el){const id=el.dataset.sessionId; setInterval(async()=>{const r=await fetch(`/api/liquidity/${id}/projector-state`); const d=await r.json(); el.innerText=`Rodada ${d.session.current_round} | Eventos: ${d.feed.length}`;},3000);}

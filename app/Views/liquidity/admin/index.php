@@ -1,0 +1,1 @@
+<h1>Piscina de Liquidez</h1><a href='/liquidity/create'>Criar sessão</a><?php foreach(($sessions??[]) as $s):?><div><a href='/liquidity/<?= (int)$s['id'] ?>'><?= htmlspecialchars($s['name']) ?></a></div><?php endforeach; ?>
