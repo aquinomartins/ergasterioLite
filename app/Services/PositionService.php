@@ -46,13 +46,40 @@ final class PositionService
         $this->pdo->beginTransaction();
 
         try {
-            $this->updateUserBalance($userId, $sharesAmount);
-            $this->createOrUpdatePosition($userId, $marketId, $optionId, $sharesAmount);
-            $this->registerTrade($userId, $marketId, $optionId, $sharesAmount);
+            $this->executeStep('updateUserBalance', [
+                'user_id' => $userId,
+                'market_id' => $marketId,
+                'option_id' => $optionId,
+            ], function () use ($userId, $sharesAmount): void {
+                $this->updateUserBalance($userId, $sharesAmount);
+            });
+            $this->executeStep('createOrUpdatePosition', [
+                'user_id' => $userId,
+                'market_id' => $marketId,
+                'option_id' => $optionId,
+            ], function () use ($userId, $marketId, $optionId, $sharesAmount): void {
+                $this->createOrUpdatePosition($userId, $marketId, $optionId, $sharesAmount);
+            });
+            $this->executeStep('registerTrade', [
+                'user_id' => $userId,
+                'market_id' => $marketId,
+                'option_id' => $optionId,
+            ], function () use ($userId, $marketId, $optionId, $sharesAmount): void {
+                $this->registerTrade($userId, $marketId, $optionId, $sharesAmount);
+            });
 
-            $this->options->incrementWeight($optionId, $sharesAmount);
-            $options = $this->recalculateProbabilities($marketId);
-            $this->createSnapshot($marketId);
+            $this->executeStep('incrementWeight', [
+                'market_id' => $marketId,
+                'option_id' => $optionId,
+            ], function () use ($optionId, $sharesAmount): void {
+                $this->options->incrementWeight($optionId, $sharesAmount);
+            });
+            $options = $this->executeStep('recalculateProbabilities', ['market_id' => $marketId], function () use ($marketId): array {
+                return $this->recalculateProbabilities($marketId);
+            });
+            $this->executeStep('createSnapshot', ['market_id' => $marketId], function () use ($marketId): void {
+                $this->createSnapshot($marketId);
+            });
 
             $this->pdo->commit();
 
@@ -182,5 +209,38 @@ final class PositionService
         }
 
         return $this->userBalancesEnabled;
+    }
+
+    private function executeStep(string $step, array $context, callable $callback)
+    {
+        try {
+            return $callback();
+        } catch (Throwable $exception) {
+            $this->logParticipationStepError($step, $exception, $context);
+            throw $exception;
+        }
+    }
+
+    private function logParticipationStepError(string $step, Throwable $exception, array $context): void
+    {
+        $sqlCode = null;
+        if (method_exists($exception, 'getCode')) {
+            $sqlCode = (string) $exception->getCode();
+        }
+
+        $message = sprintf(
+            '[%s] PositionService::%s failed: %s | sql_code=%s | context=%s%s',
+            date('Y-m-d H:i:s'),
+            $step,
+            $exception->getMessage(),
+            $sqlCode ?? 'n/a',
+            (string) json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            PHP_EOL
+        );
+
+        $logFile = dirname(__DIR__, 2) . '/storage/logs/app.log';
+        if (@file_put_contents($logFile, $message, FILE_APPEND) === false) {
+            error_log(trim($message));
+        }
     }
 }

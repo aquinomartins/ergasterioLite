@@ -64,12 +64,13 @@ final class UserBalanceRepository
     {
         $statement = $this->connection()->prepare(
             'UPDATE user_balances
-             SET balance = balance - :amount, updated_at = NOW()
-             WHERE user_id = :user_id AND balance >= :amount'
+             SET balance = balance - :debit_amount, updated_at = NOW()
+             WHERE user_id = :user_id AND balance >= :required_balance'
         );
         $statement->execute([
             'user_id' => $userId,
-            'amount' => $amount,
+            'debit_amount' => $amount,
+            'required_balance' => $amount,
         ]);
 
         return $statement->rowCount() > 0;
