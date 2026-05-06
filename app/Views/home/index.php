@@ -22,6 +22,22 @@
     </aside>
 </section>
 
+<section class="card home-liquidity-hero">
+    <div class="liquidity-entry-card">
+        <span class="eyebrow liquidity-eyebrow">Piscina de Liquidez</span>
+        <h2>Piscina de Liquidez</h2>
+        <p>
+            Arena de mercado e comportamento coletivo em que equipes depositam NFTs fictícios, recebem BTC,
+            disputam cotas e observam a confiança da piscina mudar a cada rodada.
+        </p>
+        <div class="liquidity-actions">
+            <a class="button liquidity-button-primary" href="/liquidity">Entrar como Professor</a>
+            <a class="button liquidity-button-secondary" href="/liquidity/team/login">Entrar como Equipe</a>
+            <a class="button liquidity-button-secondary" href="/liquidity">Ver Arena Pública</a>
+        </div>
+    </div>
+</section>
+
 <section class="grid-two">
     <article class="card">
         <h2>Arquitetura pensada para o próximo passo</h2>
