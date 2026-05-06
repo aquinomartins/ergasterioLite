@@ -12,6 +12,7 @@ use App\Core\Csrf;
 
         <nav class="site-nav" data-nav>
             <a href="/">Início</a>
+            <a href="/liquidity">Piscina de Liquidez</a>
             <a href="/artists">Artistas</a>
             <a href="/artworks">Obras</a>
             <a href="/markets">Mercados</a>
