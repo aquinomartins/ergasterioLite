@@ -1,0 +1,1 @@
+<form method='post' action='/liquidity/<?= (int)$sessionId ?>/teams'><?= \App\Core\Csrf::input() ?><input name='name'><button>Criar equipe</button></form><?php foreach($teams as $t):?><div><?= htmlspecialchars($t['name']) ?> - <?= htmlspecialchars($t['login_code']) ?></div><?php endforeach; ?>

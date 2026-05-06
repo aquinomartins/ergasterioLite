@@ -9,6 +9,9 @@ use App\Controllers\HomeController;
 use App\Controllers\MarketController;
 use App\Controllers\PositionController;
 use App\Controllers\RankingController;
+use App\Controllers\LiquidityAdminController;
+use App\Controllers\LiquidityApiController;
+use App\Controllers\LiquidityTeamController;
 
 $app->get('/', [HomeController::class, 'index']);
 $app->get('/register', [AuthController::class, 'showRegister'], ['guest']);
@@ -41,3 +44,25 @@ $app->post('/markets/{id}/resolve', [MarketController::class, 'resolve'], ['auth
 $app->post('/markets/{id}/positions', [PositionController::class, 'store'], ['auth']);
 
 $app->get('/rankings', [RankingController::class, 'index']);
+
+$app->get('/liquidity', [LiquidityAdminController::class, 'index']);
+$app->get('/liquidity/create', [LiquidityAdminController::class, 'create']);
+$app->post('/liquidity', [LiquidityAdminController::class, 'store']);
+$app->get('/liquidity/{id}', [LiquidityAdminController::class, 'show']);
+$app->get('/liquidity/{id}/teams', [LiquidityAdminController::class, 'teams']);
+$app->post('/liquidity/{id}/teams', [LiquidityAdminController::class, 'createTeam']);
+$app->post('/liquidity/{id}/advance-round', [LiquidityAdminController::class, 'advanceRound']);
+$app->post('/liquidity/{id}/close', [LiquidityAdminController::class, 'closeSession']);
+$app->get('/liquidity/{id}/projector', [LiquidityAdminController::class, 'projector']);
+
+$app->get('/liquidity/team/login', [LiquidityTeamController::class, 'loginForm']);
+$app->post('/liquidity/team/login', [LiquidityTeamController::class, 'login']);
+$app->get('/liquidity/team/dashboard', [LiquidityTeamController::class, 'dashboard']);
+$app->post('/liquidity/team/action', [LiquidityTeamController::class, 'submitAction']);
+
+$app->get('/api/liquidity/{id}/session', [LiquidityApiController::class, 'getSession']);
+$app->get('/api/liquidity/{id}/ranking', [LiquidityApiController::class, 'getRanking']);
+$app->get('/api/liquidity/{id}/feed', [LiquidityApiController::class, 'getFeed']);
+$app->get('/api/liquidity/{id}/pool', [LiquidityApiController::class, 'getPoolState']);
+$app->get('/api/liquidity/{id}/projector-state', [LiquidityApiController::class, 'getProjectorState']);
+$app->get('/api/liquidity/team/state', [LiquidityApiController::class, 'getTeamState']);
