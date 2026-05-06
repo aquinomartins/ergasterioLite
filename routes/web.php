@@ -12,6 +12,7 @@ use App\Controllers\RankingController;
 use App\Controllers\LiquidityAdminController;
 use App\Controllers\LiquidityApiController;
 use App\Controllers\LiquidityTeamController;
+use App\Controllers\LiquidityPredictionController;
 
 $app->get('/', [HomeController::class, 'index']);
 $app->get('/register', [AuthController::class, 'showRegister'], ['guest']);
@@ -66,3 +67,13 @@ $app->get('/api/liquidity/{id}/feed', [LiquidityApiController::class, 'getFeed']
 $app->get('/api/liquidity/{id}/pool', [LiquidityApiController::class, 'getPoolState']);
 $app->get('/api/liquidity/{id}/projector-state', [LiquidityApiController::class, 'getProjectorState']);
 $app->get('/api/liquidity/team/state', [LiquidityApiController::class, 'getTeamState']);
+
+
+$app->get('/liquidity/{sessionId}/predictions/create', [LiquidityPredictionController::class, 'createForm']);
+$app->post('/liquidity/{sessionId}/predictions', [LiquidityPredictionController::class, 'store']);
+$app->get('/liquidity/predictions/{marketId}', [LiquidityPredictionController::class, 'show']);
+$app->post('/liquidity/predictions/{marketId}/close', [LiquidityPredictionController::class, 'close']);
+$app->post('/liquidity/predictions/{marketId}/resolve', [LiquidityPredictionController::class, 'resolve']);
+$app->post('/liquidity/predictions/{marketId}/bets', [LiquidityPredictionController::class, 'placeBet']);
+$app->get('/api/liquidity/{sessionId}/predictions', [LiquidityPredictionController::class, 'listBySession']);
+$app->get('/api/liquidity/predictions/{marketId}', [LiquidityPredictionController::class, 'getMarket']);

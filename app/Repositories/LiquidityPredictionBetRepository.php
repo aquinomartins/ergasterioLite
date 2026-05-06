@@ -1,0 +1,6 @@
+<?php declare(strict_types=1); namespace App\Repositories; use PDO;
+final class LiquidityPredictionBetRepository{public function __construct(private ?PDO $pdo=null){$this->pdo=$this->pdo??\App\Core\Database::connection();}
+public function create($marketId,$optionId,$sessionId,$teamId,$amount):int{$s=$this->pdo->prepare('INSERT INTO liquidity_prediction_bets (market_id,option_id,session_id,team_id,amount) VALUES (?,?,?,?,?)');$s->execute([$marketId,$optionId,$sessionId,$teamId,$amount]);return (int)$this->pdo->lastInsertId();}
+public function getByMarketId($id){$s=$this->pdo->prepare('SELECT b.*,t.name team_name,o.label option_label FROM liquidity_prediction_bets b JOIN liquidity_teams t ON t.id=b.team_id JOIN liquidity_prediction_options o ON o.id=b.option_id WHERE market_id=? ORDER BY b.id DESC');$s->execute([$id]);return $s->fetchAll();}
+public function getByTeamId($id){$s=$this->pdo->prepare('SELECT * FROM liquidity_prediction_bets WHERE team_id=? ORDER BY id DESC');$s->execute([$id]);return $s->fetchAll();}
+public function getWinningBets($m,$o){$s=$this->pdo->prepare('SELECT * FROM liquidity_prediction_bets WHERE market_id=? AND option_id=? ORDER BY id');$s->execute([$m,$o]);return $s->fetchAll();}}
