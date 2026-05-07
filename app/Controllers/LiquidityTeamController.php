@@ -100,7 +100,19 @@ final class LiquidityTeamController extends Controller
                     'price' => isset($_POST['price']) ? (float) $_POST['price'] : null,
                 ]
             );
-            Session::flash('success', 'Ação enviada com sucesso.');
+            $messages = [
+                'deposit_nft' => 'Você entrou na piscina: -1 NFT, +10 BTC, +1 cota.',
+                'withdraw_nft_btc' => 'Você retirou uma NFT usando BTC.',
+                'withdraw_nft_cash' => 'Você retirou uma NFT usando dinheiro.',
+                'buy_btc' => 'Você comprou BTC.',
+                'sell_btc' => 'Você vendeu BTC.',
+                'sell_nft' => 'Você vendeu uma NFT em mãos.',
+                'sell_share' => 'Você vendeu uma cota da piscina.',
+                'trade_nft_between_teams' => 'Você comprou 1 NFT de outra equipe.',
+                'pass' => 'Você passou a vez.',
+            ];
+            $actionType = (string) ($_POST['action_type'] ?? '');
+            Session::flash('success', $messages[$actionType] ?? 'Ação enviada com sucesso.');
         } catch (DomainException $e) {
             Session::flash('error', $e->getMessage());
         } catch (\Throwable $e) {

@@ -19,7 +19,7 @@ $actionMeta = [
     'pass' => ['label' => 'Passar a vez', 'copy' => 'Você observa o mercado sem se mover.', 'effect' => ['Sem efeito econômico imediato']],
 ];
 ?>
-<div class="liquidity-dashboard">
+<div class="liquidity-dashboard" id="liquidity-team-dashboard">
     <section class="liquidity-header">
         <h1>Piscina de Liquidez — <?= $e($session['name'] ?? 'Sessão') ?></h1>
         <p>Equipe: <strong><?= $e($team['name'] ?? '-') ?></strong></p>
@@ -40,11 +40,11 @@ $actionMeta = [
     <section class="pool-state-card <?= $e('pool-status-' . $status) ?>">
         <h2>Estado da piscina</h2>
         <ul>
-            <li>NFTs depositadas: <?= (int) ($pool['pool_nfts'] ?? 0) ?></li>
-            <li>Total de cotas emitidas: <?= (int) ($pool['total_shares'] ?? 0) ?></li>
-            <li>Valor total bloqueado: <?= $money($pool['total_value'] ?? 0) ?></li>
-            <li>Rendimento por cota: <?= $money($pool['yield_per_share'] ?? 0) ?></li>
-            <li>Status: <strong><?= $e($status) ?></strong></li>
+            <li>NFTs depositadas: <span data-pool-nfts><?= (int) ($pool['pool_nfts'] ?? 0) ?></span></li>
+            <li>Total de cotas emitidas: <span data-pool-shares><?= (int) ($pool['total_shares'] ?? 0) ?></span></li>
+            <li>Valor total bloqueado: <span data-pool-total><?= $money($pool['total_value'] ?? 0) ?></span></li>
+            <li>Rendimento por cota: <span data-pool-yield><?= $money($pool['yield_per_share'] ?? 0) ?></span></li>
+            <li>Status: <strong data-pool-status><?= $e($status) ?></strong></li>
         </ul>
     </section>
 
