@@ -22,10 +22,10 @@ final class LiquidityActionRepository
         return (int) $stmt->fetchColumn() > 0;
     }
 
-    public function create(int $sessionId, int $roundNumber, int $teamId, string $actionType, float $quantity): void
+    public function create(int $sessionId, int $roundNumber, int $teamId, string $actionType, float $quantity, ?int $targetTeamId = null, ?float $price = null): void
     {
-        $stmt = $this->pdo->prepare('INSERT INTO liquidity_team_actions (session_id, round_number, team_id, action_type, quantity) VALUES (?, ?, ?, ?, ?)');
-        $stmt->execute([$sessionId, $roundNumber, $teamId, $actionType, $quantity]);
+        $stmt = $this->pdo->prepare('INSERT INTO liquidity_team_actions (session_id, round_number, team_id, action_type, quantity, target_team_id, price) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$sessionId, $roundNumber, $teamId, $actionType, $quantity, $targetTeamId, $price]);
     }
 
     public function getLastActionForTeam(int $sessionId, int $roundNumber, int $teamId): ?array

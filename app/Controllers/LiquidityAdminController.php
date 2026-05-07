@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Session;
+use App\Core\Csrf;
 use App\Repositories\LiquidityActionRepository;
 use App\Repositories\LiquidityTeamRepository;
 use App\Services\LiquidityPoolService;
@@ -46,7 +47,9 @@ final class LiquidityAdminController extends Controller
 
     public function teams(string $id): void { $this->view('liquidity.admin.teams', ['sessionId' => (int) $id, 'teams' => (new LiquidityTeamRepository())->getBySessionId((int) $id)]); }
     public function createTeam(string $id): void { $this->s->createTeam((int) $id, (string) ($_POST['name'] ?? '')); $this->redirectTo('/liquidity/' . $id . '/teams'); }
-    public function advanceRound(string $id): void { $this->s->advanceRound((int) $id); $this->redirectTo('/liquidity/' . $id); }
+    public function advanceRound(string $id): void { if (!Csrf::verifyFromRequest()) { Session::flash('error','CSRF inválido.'); $this->redirectTo('/liquidity/' . $id);} $this->s->advanceRound((int) $id); $this->redirectTo('/liquidity/' . $id); }
+    public function evaluateSemifinal(string $id): void { if (!Csrf::verifyFromRequest()) { Session::flash('error','CSRF inválido.'); $this->redirectTo('/liquidity/' . $id);} $this->s->evaluateSemifinal((int) $id); $this->redirectTo('/liquidity/' . $id); }
+    public function closeFinal(string $id): void { if (!Csrf::verifyFromRequest()) { Session::flash('error','CSRF inválido.'); $this->redirectTo('/liquidity/' . $id);} $this->s->closeFinal((int) $id); $this->redirectTo('/liquidity/' . $id); }
     public function closeSession(string $id): void { $this->s->closeSession((int) $id); $this->redirectTo('/liquidity/' . $id); }
     public function projector(string $id): void { $this->view('liquidity.admin.projector', ['sessionId' => (int) $id]); }
 }

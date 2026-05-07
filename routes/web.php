@@ -53,6 +53,8 @@ $app->get('/liquidity/{id}', [LiquidityAdminController::class, 'show']);
 $app->get('/liquidity/{id}/teams', [LiquidityAdminController::class, 'teams']);
 $app->post('/liquidity/{id}/teams', [LiquidityAdminController::class, 'createTeam']);
 $app->post('/liquidity/{id}/advance-round', [LiquidityAdminController::class, 'advanceRound']);
+$app->post('/liquidity/{id}/evaluate-semifinal', [LiquidityAdminController::class, 'evaluateSemifinal']);
+$app->post('/liquidity/{id}/close-final', [LiquidityAdminController::class, 'closeFinal']);
 $app->post('/liquidity/{id}/close', [LiquidityAdminController::class, 'closeSession']);
 $app->get('/liquidity/{id}/projector', [LiquidityAdminController::class, 'projector']);
 

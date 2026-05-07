@@ -94,7 +94,11 @@ final class LiquidityTeamController extends Controller
                 $sid,
                 $tid,
                 (string) ($_POST['action_type'] ?? ''),
-                (float) ($_POST['quantity'] ?? 1)
+                (float) ($_POST['quantity'] ?? 1),
+                [
+                    'target_team_id' => isset($_POST['target_team_id']) ? (int) $_POST['target_team_id'] : null,
+                    'price' => isset($_POST['price']) ? (float) $_POST['price'] : null,
+                ]
             );
             Session::flash('success', 'Ação enviada com sucesso.');
         } catch (DomainException $e) {

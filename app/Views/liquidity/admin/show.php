@@ -9,7 +9,7 @@ $money = static fn($v): string => 'R$ ' . number_format((float)$v, 2, ',', '.');
 <div class="liquidity-dashboard">
     <section class="liquidity-header">
         <h1><?= $e($s['name'] ?? 'Sessão') ?></h1>
-        <p>Código: <strong><?= $e($s['access_code'] ?? '-') ?></strong> · Rodada <?= (int)($s['current_round'] ?? 0) ?>/<?= (int)($s['total_rounds'] ?? 0) ?> · Status: <?= $e($s['status'] ?? '-') ?></p>
+        <p>Código: <strong><?= $e($s['access_code'] ?? '-') ?></strong> · Rodada <?= (int)($s['current_round'] ?? 0) ?>/<?= (int)($s['total_rounds'] ?? 0) ?> · Fase: <?= (['session_phase'] ?? 'regular') ?> · Status: <?= $e($s['status'] ?? '-') ?></p>
         <p>Parâmetros: BTC compra <?= $money($s['btc_buy_price'] ?? 0) ?> | BTC venda <?= $money($s['btc_sell_price'] ?? 0) ?> | Venda NFT <?= $money($s['nft_sell_price'] ?? 0) ?> | Venda cota <?= $money($s['share_sell_price'] ?? 0) ?></p>
     </section>
 
@@ -20,7 +20,7 @@ $money = static fn($v): string => 'R$ ' . number_format((float)$v, 2, ',', '.');
 
     <section class="vitality-card">
         <h2>Equipes</h2>
-        <table><thead><tr><th>Equipe</th><th>Caixa</th><th>BTC</th><th>NFTs</th><th>Cotas</th><th>Payoff</th><th>Agiu?</th></tr></thead>
+        <table><thead><tr><th>Equipe</th><th>Caixa</th><th>BTC</th><th>NFTs</th><th>Cotas</th><th>Payoff</th><th>Status</th><th>Agiu?</th></tr></thead>
         <tbody><?php foreach ($teams as $team): $score = (float)$team['cash_balance'] + ((float)$team['btc_balance']*(float)$s['btc_sell_price']) + ((int)$team['nft_balance']*(float)$s['nft_sell_price']) + ((int)$team['pool_shares']*(float)$s['share_sell_price']); ?><tr><td><?= $e($team['name']) ?></td><td><?= $money($team['cash_balance']) ?></td><td><?= number_format((float)$team['btc_balance'],2,',','.') ?></td><td><?= (int)$team['nft_balance'] ?></td><td><?= (int)$team['pool_shares'] ?></td><td><?= $money($score) ?></td><td><?= !empty($actedByTeam[(int)$team['id']]) ? 'Sim' : 'Não' ?></td></tr><?php endforeach; ?></tbody></table>
     </section>
 
