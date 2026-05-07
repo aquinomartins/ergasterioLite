@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Csrf;
 use App\Core\Session;
 use App\Repositories\LiquidityActionRepository;
 use App\Repositories\LiquidityEventRepository;
@@ -42,9 +43,13 @@ final class LiquidityTeamController extends Controller
     {
         $sid = (int) Session::get('liquidity_session_id', 0);
         $tid = (int) Session::get('liquidity_team_id', 0);
-        $state = $this->s->getProjectorState($sid);
-        $session = $state['session'] ?? [];
-        $currentRound = (int) ($session['current_round'] ?? 0);
+        if ($sid <= 0 || $tid <= 0) {
+            Session::flash('error', 'Faça login da equipe para acessar a arena.');
+            $this->redirectTo('/liquidity/team/login');
+        }
+
+        $session = $this->s->getProjectorState($sid)['session'] ?? [];
+        $currentRound = (int) ($session['current_round'] ?? 1);
 
         $teamRepo = new LiquidityTeamRepository();
         $actionRepo = new LiquidityActionRepository();
@@ -52,37 +57,50 @@ final class LiquidityTeamController extends Controller
         $poolRepo = new LiquidityPoolRepository();
 
         $team = $teamRepo->findById($tid) ?? [];
-        $ranking = $this->s->getRanking($sid);
         $pool = $poolRepo->findBySessionId($sid) ?? [];
-        $events = $eventRepo->getRecentBySession($sid, 20);
         $hasActed = $actionRepo->hasTeamActed($sid, $currentRound, $tid);
-        $partialScore = $this->s->calculatePartialScore($team, $session);
+        $lastAction = $actionRepo->getLastActionForTeam($sid, $currentRound, $tid);
 
         $this->view('liquidity.team.dashboard', [
             'session' => $session,
             'team' => $team,
             'pool' => $pool,
-            'ranking' => $ranking,
-            'events' => $events,
-            'hasActed' => $hasActed,
-            'partialScore' => $partialScore,
             'currentRound' => $currentRound,
+            'hasActed' => $hasActed,
+            'lastAction' => $lastAction,
+            'events' => $eventRepo->getRecentBySession($sid, 30),
+            'ranking' => $this->s->getRanking($sid),
+            'partialScore' => $this->s->calculatePartialScore($team, $session),
             'predictionMarkets' => $this->pred->getMarketsForTeamDashboard($sid),
         ]);
     }
 
     public function submitAction(): void
     {
+        $sid = (int) Session::get('liquidity_session_id', 0);
+        $tid = (int) Session::get('liquidity_team_id', 0);
+        if ($sid <= 0 || $tid <= 0) {
+            Session::flash('error', 'Sessão da equipe inválida.');
+            $this->redirectTo('/liquidity/team/login');
+        }
+
+        if (!Csrf::verifyFromRequest()) {
+            Session::flash('error', 'Token CSRF inválido. Recarregue a página e tente novamente.');
+            $this->redirectTo('/liquidity/team/dashboard');
+        }
+
         try {
             $this->s->submitTeamAction(
-                (int) Session::get('liquidity_session_id', 0),
-                (int) Session::get('liquidity_team_id', 0),
+                $sid,
+                $tid,
                 (string) ($_POST['action_type'] ?? ''),
                 (float) ($_POST['quantity'] ?? 1)
             );
             Session::flash('success', 'Ação enviada com sucesso.');
         } catch (DomainException $e) {
             Session::flash('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            Session::flash('error', 'Não foi possível processar sua ação agora.');
         }
 
         $this->redirectTo('/liquidity/team/dashboard');
