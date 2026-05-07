@@ -15,6 +15,7 @@ $actionMeta = [
     'sell_btc' => ['label' => 'Vender BTC', 'copy' => 'Você transforma liquidez em caixa imediato.', 'effect' => ['-BTC', '+R$ 100 por BTC'], 'quantity' => true],
     'sell_nft' => ['label' => 'Vender NFT', 'copy' => 'Você vende um ativo bruto para reforçar o caixa.', 'effect' => ['-1 NFT', '+R$ 1.800,00']],
     'sell_share' => ['label' => 'Vender cota', 'copy' => 'Você reduz sua participação no organismo coletivo.', 'effect' => ['-1 cota', '+R$ 500,00', '-1 cota total da piscina']],
+    'trade_nft_between_teams' => ['label' => 'Comprar NFT de outro time', 'copy' => 'Na versão beta, a compra é direta e executada imediatamente.', 'effect' => ['-R$ preço informado', '+1 NFT em mãos'], 'trade' => true],
     'pass' => ['label' => 'Passar a vez', 'copy' => 'Você observa o mercado sem se mover.', 'effect' => ['Sem efeito econômico imediato']],
 ];
 ?>
@@ -22,7 +23,8 @@ $actionMeta = [
     <section class="liquidity-header">
         <h1>Piscina de Liquidez — <?= $e($session['name'] ?? 'Sessão') ?></h1>
         <p>Equipe: <strong><?= $e($team['name'] ?? '-') ?></strong></p>
-        <p>Rodada <strong><?= (int) $currentRound ?></strong> de <?= (int) ($session['total_rounds'] ?? 0) ?> · Status: <strong><?= $e($session['status'] ?? '-') ?></strong></p>
+        <p>Rodada <strong><?= (int) $currentRound ?></strong> de <?= (int) ($session['total_rounds'] ?? 0) ?> · Fase: <strong><?= $e($session['session_phase'] ?? 'regular') ?></strong> · Status: <strong><?= $e($session['status'] ?? '-') ?></strong></p>
+        <?php if (!empty($team['is_eliminated'])): ?><p class="warning-text">Seu time foi eliminado na semifinal.</p><?php endif; ?>
         <?php if ($hasActed): ?><p class="warning-text">A decisão desta rodada já foi enviada. Aguarde o professor avançar para a próxima rodada.</p><?php endif; ?>
     </section>
 
@@ -58,7 +60,16 @@ $actionMeta = [
                     <p><?= $e($meta['copy']) ?></p>
                     <ul class="action-effect"><?php foreach ($meta['effect'] as $effect): ?><li><?= $e($effect) ?></li><?php endforeach; ?></ul>
                     <?php if (!empty($meta['quantity'])): ?><input type="number" name="quantity" min="1" step="1" value="1" <?= $hasActed ? 'disabled' : '' ?> required><?php endif; ?>
-                    <button type="submit" <?= $hasActed ? 'disabled' : '' ?>><?= $e($meta['label']) ?></button>
+                    <?php if (!empty($meta['trade'])): ?>
+                        <select name="target_team_id" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
+                            <option value="">Time vendedor</option>
+                            <?php foreach ($ranking as $seller): if ((int)($seller['id'] ?? 0) === $teamId) continue; ?>
+                                <option value="<?= (int)$seller['id'] ?>"><?= $e($seller['name'] ?? '-') ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <input type="number" name="price" min="0.01" step="0.01" placeholder="Preço em R$" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
+                    <?php endif; ?>
+                    <button type="submit" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?>><?= $e($meta['label']) ?></button>
                 </form>
             <?php endforeach; ?>
         </div>
