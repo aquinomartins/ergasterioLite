@@ -1,19 +1,19 @@
-body{background:#0b0f14;color:#e9f4ff}
+body{background:#f8fafc;color:#0f172a}
 .liquidity-dashboard{display:grid;gap:16px}
-.liquidity-header,.vitality-card,.payoff-card,.pool-state-card,.feed-card,.ranking-card,.action-card{background:#121a22;border:1px solid #223242;border-radius:12px;padding:14px}
+.liquidity-header,.vitality-card,.payoff-card,.pool-state-card,.feed-card,.ranking-card,.action-card{background:#ffffff;border:1px solid #dbe4ef;border-radius:12px;padding:14px;box-shadow:0 10px 24px rgba(15,23,42,.05)}
 .liquidity-vitals{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
-.vitality-card h3{margin:0 0 8px;color:#84e6ff}
-.vitality-card p{font-size:1.4rem;margin:0;color:#fff}
-.payoff-card{border-color:#00d38a;box-shadow:0 0 0 1px #00d38a inset}
-.payoff-card p{font-size:2rem;color:#87ffd2;margin:0}
-.pool-state-card{border-left:5px solid #3ea6ff}
-.pool-status-empty{border-left-color:#6f7f8f}.pool-status-tense{border-left-color:#f4b942}.pool-status-stable{border-left-color:#00d38a}.pool-status-critical{border-left-color:#ff6f3d}.pool-status-collapsed{border-left-color:#ff4d5d}
+.vitality-card h3{margin:0 0 8px;color:#0c4a6e}
+.vitality-card p{font-size:1.4rem;margin:0;color:#0f172a}
+.payoff-card{border-color:#16a34a;box-shadow:0 0 0 1px rgba(22,163,74,.25) inset,0 10px 24px rgba(15,23,42,.05)}
+.payoff-card p{font-size:2rem;color:#15803d;margin:0}
+.pool-state-card{border-left:5px solid #2563eb}
+.pool-status-empty{border-left-color:#64748b}.pool-status-tense{border-left-color:#d97706}.pool-status-stable{border-left-color:#16a34a}.pool-status-critical{border-left-color:#ea580c}.pool-status-collapsed{border-left-color:#dc2626}
 .action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
-.action-card button{margin-top:10px;width:100%;background:#00bcd4;color:#041017;border:0;padding:10px;border-radius:8px;font-weight:700}
-.action-effect{font-size:.92rem;color:#b8d6ea;padding-left:16px}
+.action-card button{margin-top:10px;width:100%;background:#0ea5e9;color:#ffffff;border:0;padding:10px;border-radius:8px;font-weight:700}
+.action-effect{font-size:.92rem;color:#475569;padding-left:16px}
 .action-disabled{opacity:.6}
-.warning-text{color:#ffcb6b;background:#3b2c07;border:1px solid #8c6b24;padding:10px;border-radius:8px}
+.warning-text{color:#92400e;background:#fff7ed;border:1px solid #fed7aa;padding:10px;border-radius:8px}
 .vitality-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.current-team-row{background:#133129}
-table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #223242;text-align:left}
+.current-team-row{background:#ecfeff}
+table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #dbe4ef;text-align:left}
 @media (max-width:900px){.vitality-grid{grid-template-columns:1fr}}
