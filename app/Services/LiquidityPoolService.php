@@ -247,8 +247,50 @@ final class LiquidityPoolService {
     private function formatNames(array $names):string{if(count($names)<=1)return $names[0]??'';$last=array_pop($names);return implode(', ',$names).' e '.$last;}
     public function calculatePartialScore($t,$s):float{return (float)$t['cash_balance']+((float)$t['btc_balance']*(float)$s['btc_sell_price'])+((int)$t['nft_balance']*(float)$s['nft_sell_price'])+((int)$t['pool_shares']*(float)$s['share_sell_price']);}
     public function calculateFinalCashScore($t):float{return (float)$t['cash_balance'];}
-    public function getRanking($sid):array{$s=$this->mustSession((int)$sid);$teams=$this->teams->getBySessionId((int)$sid);foreach($teams as &$t){$t['score']=$this->calculatePartialScore($t,$s);$t['final_cash_score']=$this->calculateFinalCashScore($t);$t['display_status']=$this->finalStatusForTeam($t);}unset($t);usort($teams,fn($a,$b)=>$b['score']<=>$a['score']);return $teams;}
-    public function getFinalRanking($sid):array{$teams=$this->teams->getBySessionId((int)$sid);$finalists=array_values(array_filter($teams,fn($t)=>!empty($t['qualified_for_final']) && empty($t['is_eliminated'])));usort($finalists,fn($a,$b)=>((float)$b['cash_balance']<=>(float)$a['cash_balance']) ?: ((string)$a['name']<=>(string)$b['name']));$previous=null;$position=0;$seen=0;foreach($finalists as &$t){$seen++;$cash=(float)$t['cash_balance'];if($previous===null||abs($cash-$previous)>0.00001){$position=$seen;$previous=$cash;}$t['final_position']=$position;$t['final_cash_score']=$cash;$t['display_status']=$this->finalStatusForTeam($t);}unset($t);return $finalists;}
+    public function calcularRankingGeral($sid):array{
+        $s=$this->mustSession((int)$sid);
+        $teams=$this->teams->getBySessionId((int)$sid);
+        foreach($teams as &$t){
+            $t['score']=$this->calculatePartialScore($t,$s);
+            $t['estimated_wealth']=$t['score'];
+            $t['final_cash_score']=$this->calculateFinalCashScore($t);
+            $t['display_status']=$this->finalStatusForTeam($t);
+        }
+        unset($t);
+        usort($teams,fn($a,$b)=>
+            ((float)$b['estimated_wealth']<=>(float)$a['estimated_wealth'])
+            ?: ((float)$b['cash_balance']<=>(float)$a['cash_balance'])
+            ?: ((string)$a['name']<=>(string)$b['name'])
+        );
+        foreach($teams as $i=>&$t){$t['general_position']=$i+1;}
+        unset($t);
+        return $teams;
+    }
+    public function calcularRankingFinal($sid):array{
+        $s=$this->mustSession((int)$sid);
+        $finalClosed=$this->isFinalClosed($s);
+        $teams=$this->teams->getBySessionId((int)$sid);
+        $finalists=array_values(array_filter($teams,fn($t)=>!empty($t['qualified_for_final']) && empty($t['is_eliminated'])));
+        usort($finalists,fn($a,$b)=>((float)$b['cash_balance']<=>(float)$a['cash_balance']) ?: ((string)$a['name']<=>(string)$b['name']));
+        $topCash=$finalists? (float)$finalists[0]['cash_balance'] : null;
+        $topTieCount=$topCash===null?0:count(array_filter($finalists,fn($t)=>abs((float)$t['cash_balance']-$topCash)<0.00001));
+        $previous=null;$position=0;$seen=0;
+        foreach($finalists as &$t){
+            $seen++;$cash=(float)$t['cash_balance'];
+            if($previous===null||abs($cash-$previous)>0.00001){$position=$seen;$previous=$cash;}
+            $t['final_position']=$position;
+            $t['final_cash_score']=$cash;
+            if($finalClosed){
+                $t['display_status']=$position===1?($topTieCount>1?'Vencedor empatado':'Vencedor'):'Finalista';
+            }else{
+                $t['display_status']='Classificado para a final';
+            }
+        }
+        unset($t);
+        return $finalists;
+    }
+    public function getRanking($sid):array{return $this->calcularRankingGeral((int)$sid);}
+    public function getFinalRanking($sid):array{return $this->calcularRankingFinal((int)$sid);}
     public function updatePoolTotals($sid):void{$s=$this->mustSession((int)$sid);$p=$this->pool->findBySessionId((int)$sid);$total=(int)$p['pool_nfts']*(float)$s['nft_pool_value'];$yield=((int)$p['total_shares']>0)?($total*(float)$s['pool_yield_rate'])/(int)$p['total_shares']:0;$this->pool->updateState((int)$sid,(int)$p['pool_nfts'],(int)$p['total_shares'],$total,$yield,$this->determinePoolStatus((int)$p['pool_nfts'],(int)$p['total_shares']));}
     public function updatePoolStatus($sid):void{$this->updatePoolTotals($sid);} public function determinePoolStatus($n,$ts):string{if($n<=0)return 'empty';if($n===1)return 'tense';if($n>=2 && $ts>=1)return 'stable';if($n>=1 && $ts===0)return 'critical';return 'collapsed';}
     public function closeSession($sid):void{$this->closeFinal($sid);} public function getProjectorState($sid):array{return ['session'=>$this->mustSession((int)$sid),'pool'=>$this->pool->findBySessionId((int)$sid),'ranking'=>$this->getRanking((int)$sid),'final_ranking'=>$this->getFinalRanking((int)$sid),'feed'=>$this->events->getRecentBySession((int)$sid,20)];}

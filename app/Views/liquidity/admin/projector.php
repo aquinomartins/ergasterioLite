@@ -18,8 +18,9 @@
 
     <section class="vitality-grid">
         <article class="vitality-card">
-            <h2>Ranking ao vivo</h2>
-            <table class="ranking-table"><thead><tr><th>#</th><th>Equipe</th><th>Score</th></tr></thead><tbody data-ranking-body></tbody></table>
+            <h2>Ranking geral</h2>
+            <p>Ranking informativo por patrimônio estimado. Não define o vencedor da final.</p>
+            <table class="ranking-table"><thead><tr><th>#</th><th>Equipe</th><th>Patrimônio estimado</th><th>Status</th></tr></thead><tbody data-ranking-body></tbody></table>
         </article>
         <article class="vitality-card">
             <h2>Feed vivo</h2>

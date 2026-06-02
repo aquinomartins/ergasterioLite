@@ -29,7 +29,7 @@
 
       var rankBody = root.querySelector('[data-ranking-body]');
       rankBody.innerHTML = ranking.slice(0, 10).map(function (row, i) {
-        return '<tr><td>' + (i + 1) + '</td><td>' + (row.name || 'Equipe') + '</td><td>' + Number(row.score || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td></tr>';
+        return '<tr><td>' + (row.general_position || (i + 1)) + '</td><td>' + (row.name || 'Equipe') + '</td><td>' + money(row.estimated_wealth || row.score || 0) + '</td><td>' + (row.display_status || 'Em jogo') + '</td></tr>';
       }).join('');
 
       var feedList = root.querySelector('[data-feed-list]');
