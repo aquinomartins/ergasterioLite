@@ -25,7 +25,7 @@ $actionMeta = [
         <p>Equipe: <strong><?= $e($team['name'] ?? '-') ?></strong></p>
         <p>Rodada <strong><?= (int) $currentRound ?></strong> de <?= (int) ($session['total_rounds'] ?? 0) ?> · Fase: <strong><?= $e($session['session_phase'] ?? 'regular') ?></strong> · Status: <strong><?= $e($session['status'] ?? '-') ?></strong></p>
         <?php if (!empty($team['is_eliminated'])): ?><p class="warning-text">Seu time foi eliminado na semifinal.</p><?php endif; ?>
-        <?php if ($hasActed): ?><p class="warning-text">A decisão desta rodada já foi enviada. Aguarde o professor avançar para a próxima rodada.</p><?php endif; ?>
+        <?php if ($hasActed): ?><p class="warning-text">Este time já usou sua ação nesta rodada. Aguarde o professor avançar para a próxima rodada.</p><?php endif; ?>
     </section>
 
     <section class="liquidity-vitals">
@@ -50,6 +50,7 @@ $actionMeta = [
 
     <section>
         <h2>Decisão da rodada</h2>
+        <?php if ($hasActed): ?><p class="warning-text">Este time já usou sua ação nesta rodada.</p><?php endif; ?>
         <?php if ($lastAction): ?><p>Última ação registrada: <strong><?= $e($lastAction['action_type'] ?? '-') ?></strong> (qtd: <?= number_format((float)($lastAction['quantity'] ?? 0), 2, ',', '.') ?>)</p><?php endif; ?>
         <div class="action-grid">
             <?php foreach ($actionMeta as $type => $meta): ?>

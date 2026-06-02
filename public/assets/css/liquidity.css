@@ -148,6 +148,24 @@ body {
     background: #fff7ed;
 }
 
+
+.round-ready-message {
+    color: #166534;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-weight: 700;
+}
+
+.liquidity-round-state-table {
+    margin-top: 12px;
+}
+
+.liquidity-round-state-table .liquidity-table {
+    min-width: 520px;
+}
+
 .liquidity-inline-control {
     margin-top: 14px;
 }
