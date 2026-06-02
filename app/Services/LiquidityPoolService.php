@@ -87,28 +87,55 @@ final class LiquidityPoolService {
         $this->pdo->beginTransaction();
         try{
             $this->rounds->closeRound($sid,$round);
+            $this->events->create($sid,$round,null,'round_closed','Rodada encerrada.',0,0,0,0);
+
             $teams=$this->teams->getBySessionId($sid);
+            $roundFee=max(0.0,(float)$s['round_fee']);
+            foreach($teams as &$t){
+                $availableCash=max(0.0,(float)$t['cash_balance']);
+                $paid=min($availableCash,$roundFee);
+                $newCash=$availableCash-$paid;
+                $this->teams->updateBalances((int)$t['id'],$newCash,(float)$t['btc_balance'],(int)$t['nft_balance'],(int)$t['pool_shares']);
+                $t['cash_balance']=$newCash;
+
+                if($paid+0.00001>=$roundFee){
+                    $this->events->create($sid,$round,(int)$t['id'],'round_fee','Time '.$t['name'].' pagou '.$this->formatMoney($paid).' de taxa de participação.',-$paid,0,0,0);
+                }else{
+                    $this->events->create($sid,$round,(int)$t['id'],'round_fee_partial','Time '.$t['name'].' pagou taxa parcial de '.$this->formatMoney($paid).' por falta de saldo.',-$paid,0,0,0);
+                }
+            }
+            unset($t);
+
             $pool=$this->pool->findBySessionId($sid);
-            $totalValue=(int)$pool['pool_nfts']*(float)$s['nft_pool_value'];
+            $poolNfts=(int)($pool['pool_nfts']??0);
+            $totalShares=(int)($pool['total_shares']??0);
+            $totalValue=$poolNfts*(float)$s['nft_pool_value'];
             $yieldTotal=$totalValue*(float)$s['pool_yield_rate'];
-            $yieldPer=((int)$pool['total_shares']>0)?$yieldTotal/(int)$pool['total_shares']:0.0;
+            $yieldPer=($poolNfts>0&&$totalShares>0)?$yieldTotal/$totalShares:0.0;
 
-            foreach($teams as $t){
-                $this->teams->updateBalances((int)$t['id'],(float)$t['cash_balance']-(float)$s['round_fee']+((int)$t['pool_shares']*$yieldPer),(float)$t['btc_balance'],(int)$t['nft_balance'],(int)$t['pool_shares']);
+            $this->events->create($sid,$round,null,'pool_value','Piscina tinha '.$poolNfts.' NFTs depositadas, totalizando '.$this->formatMoney($totalValue).'.',0,0,0,0);
+            $this->events->create($sid,$round,null,'pool_yield_total','Rendimento total da rodada: '.$this->formatMoney($yieldTotal).'.',0,0,0,0);
+            $this->events->create($sid,$round,null,'pool_yield_per_share','Rendimento por cota: '.$this->formatMoney($yieldPer).'.',0,0,0,0);
+
+            if($yieldTotal>0&&$yieldPer>0){
+                foreach($teams as $t){
+                    $shares=(int)$t['pool_shares'];
+                    if($shares<=0)continue;
+                    $teamYield=$shares*$yieldPer;
+                    $this->teams->updateBalances((int)$t['id'],(float)$t['cash_balance']+$teamYield,(float)$t['btc_balance'],(int)$t['nft_balance'],$shares);
+                    $this->events->create($sid,$round,(int)$t['id'],'pool_yield','Time '.$t['name'].' recebeu '.$this->formatMoney($teamYield).' de rendimento por '.$shares.' '.($shares===1?'cota':'cotas').'.',$teamYield,0,0,0);
+                }
             }
 
-            $this->pool->updateState($sid,(int)$pool['pool_nfts'],(int)$pool['total_shares'],$totalValue,$yieldPer,$this->determinePoolStatus((int)$pool['pool_nfts'],(int)$pool['total_shares']));
-            $this->events->create($sid,$round,null,'round_closed','Rodada '.$round.' encerrada. Cada time pagou R$ '.number_format((float)$s['round_fee'],2,',','.').'. A piscina distribuiu R$ '.number_format($yieldPer,2,',','.').' por cota.',0,0,0,0);
+            $this->pool->updateState($sid,$poolNfts,$totalShares,$totalValue,$yieldPer,$this->determinePoolStatus($poolNfts,$totalShares));
 
-            if($round<(int)$s['total_rounds']){
-                $nextRound=$round+1;
-                $this->sessions->incrementRound($sid);
-                $this->rounds->createRound($sid,$nextRound);
-                $this->events->create($sid,$nextRound,null,'round_started','Rodada '.$nextRound.' iniciada. Todos os times podem agir novamente.',0,0,0,0);
-            }
+            $nextRound=$round+1;
+            $this->sessions->incrementRound($sid);
+            $this->rounds->createRound($sid,$nextRound);
+            $this->events->create($sid,$nextRound,null,'round_started','Nova rodada iniciada. Todos os times podem agir novamente.',0,0,0,0);
 
             $this->pdo->commit();
-            return ['message'=>'Rodada avançada.'];
+            return ['message'=>'Rodada encerrada e nova rodada iniciada.'];
         }catch(\Throwable $e){
             if($this->pdo->inTransaction())$this->pdo->rollBack();
             throw $e;
