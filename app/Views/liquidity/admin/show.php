@@ -192,11 +192,61 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
             <p class="liquidity-eyebrow">Decisão dos times</p>
             <h2>Registrar ação do time</h2>
         </div>
-        <p>As ações continuam sendo registradas no painel de cada equipe. Use este bloco para acompanhar se cada time já usou sua ação na rodada atual.</p>
-        <div class="liquidity-action-summary">
-            <span><strong><?= $actedCount ?></strong> com ação registrada</span>
-            <span><strong><?= $pendingCount ?></strong> aguardando decisão</span>
-        </div>
+        <p>Escolha a equipe, a ação da rodada e preencha somente os campos exigidos. O backend valida saldo, NFTs, cotas e bloqueia a segunda ação do mesmo time na rodada atual.</p>
+        <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/actions" class="liquidity-team-action-form" data-admin-action-form>
+            <?= \App\Core\Csrf::input() ?>
+            <div class="liquidity-form-grid">
+                <label>
+                    <span>Equipe</span>
+                    <select name="team_id" required>
+                        <option value="">Selecione a equipe</option>
+                        <?php foreach ($teams as $team): ?>
+                            <?php $teamId = (int)$team['id']; ?>
+                            <option value="<?= $teamId ?>" <?= !empty($actedByTeam[$teamId]) ? 'disabled' : '' ?>>
+                                <?= $e($team['name'] ?? '-') ?><?= !empty($actedByTeam[$teamId]) ? ' — ação já usada' : '' ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label>
+                    <span>Ação</span>
+                    <select name="action_type" data-action-select required>
+                        <option value="deposit_nft">Depositar NFT na piscina</option>
+                        <option value="withdraw_nft">Retirar NFT da piscina</option>
+                        <option value="buy_btc">Comprar BTC</option>
+                        <option value="sell_btc">Vender BTC</option>
+                        <option value="sell_nft">Vender NFT em mãos</option>
+                        <option value="sell_share">Vender cota da piscina</option>
+                        <option value="pass">Passar a vez</option>
+                    </select>
+                </label>
+                <label data-quantity-field hidden>
+                    <span>Quantidade</span>
+                    <input type="number" name="quantity" min="0.01" step="0.01" value="1" inputmode="decimal">
+                </label>
+                <label data-payment-field hidden>
+                    <span>Forma de pagamento</span>
+                    <select name="payment_method">
+                        <option value="btc">Pagar com 11 BTC</option>
+                        <option value="cash">Pagar com R$ 2.000</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Time alvo</span>
+                    <select name="target_team_id">
+                        <option value="">Não usar nesta etapa</option>
+                        <?php foreach ($teams as $team): ?>
+                            <option value="<?= (int)$team['id'] ?>"><?= $e($team['name'] ?? '-') ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            </div>
+            <div class="liquidity-action-summary">
+                <span><strong><?= $actedCount ?></strong> com ação registrada</span>
+                <span><strong><?= $pendingCount ?></strong> aguardando decisão</span>
+            </div>
+            <button type="submit">Registrar ação</button>
+        </form>
     </section>
 
     <section class="liquidity-card feed-card">

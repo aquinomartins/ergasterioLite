@@ -9,8 +9,8 @@ foreach ($ranking as $index => $entry) {
 }
 $actionMeta = [
     'deposit_nft' => ['label' => 'Entrar na Piscina', 'copy' => 'Você entrega uma NFT ao organismo coletivo, recebe BTC e ganha uma cota.', 'effect' => ['-1 NFT', '+10 BTC', '+1 cota', '+1 NFT na piscina']],
-    'withdraw_nft_btc' => ['label' => 'Retirar com BTC', 'copy' => 'Você recupera um ativo, mas reduz a profundidade da piscina.', 'effect' => ['-11 BTC', '+1 NFT', '-1 NFT da piscina']],
-    'withdraw_nft_cash' => ['label' => 'Retirar com dinheiro', 'copy' => 'Você usa caixa para sair da exposição coletiva.', 'effect' => ['-R$ 2.000,00', '+1 NFT', '-1 NFT da piscina']],
+    'withdraw_nft_btc' => ['label' => 'Retirar com BTC', 'copy' => 'Você recupera um ativo, mas reduz a profundidade da piscina.', 'effect' => ['-11 BTC', '-1 cota', '+1 NFT', '-1 NFT da piscina']],
+    'withdraw_nft_cash' => ['label' => 'Retirar com dinheiro', 'copy' => 'Você usa caixa para sair da exposição coletiva.', 'effect' => ['-R$ 2.000,00', '-1 cota', '+1 NFT', '-1 NFT da piscina']],
     'buy_btc' => ['label' => 'Comprar BTC', 'copy' => 'Você troca caixa por poder de retirada.', 'effect' => ['-R$ 120 por BTC', '+BTC'], 'quantity' => true],
     'sell_btc' => ['label' => 'Vender BTC', 'copy' => 'Você transforma liquidez em caixa imediato.', 'effect' => ['-BTC', '+R$ 100 por BTC'], 'quantity' => true],
     'sell_nft' => ['label' => 'Vender NFT', 'copy' => 'Você vende um ativo bruto para reforçar o caixa.', 'effect' => ['-1 NFT', '+R$ 1.800,00']],

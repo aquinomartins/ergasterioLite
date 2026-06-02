@@ -56,6 +56,40 @@ final class LiquidityAdminController extends Controller
 
     public function teams(string $id): void { $this->view('liquidity.admin.teams', ['sessionId' => (int) $id, 'teams' => (new LiquidityTeamRepository())->getBySessionId((int) $id)]); }
     public function createTeam(string $id): void { $this->s->createTeam((int) $id, (string) ($_POST['name'] ?? '')); $this->redirectTo('/liquidity/' . $id . '/teams'); }
+
+    public function registerTeamAction(string $id): void
+    {
+        if (!Csrf::verifyFromRequest()) {
+            Session::flash('error', 'CSRF inválido.');
+            $this->redirectTo('/liquidity/' . $id);
+        }
+
+        $actionType = (string) ($_POST['action_type'] ?? '');
+        if ($actionType === 'withdraw_nft') {
+            $paymentMethod = (string) ($_POST['payment_method'] ?? '');
+            $actionType = $paymentMethod === 'cash' ? 'withdraw_nft_cash' : ($paymentMethod === 'btc' ? 'withdraw_nft_btc' : '');
+        }
+
+        try {
+            $this->s->submitTeamAction(
+                (int) $id,
+                (int) ($_POST['team_id'] ?? 0),
+                $actionType,
+                (float) ($_POST['quantity'] ?? 1),
+                [
+                    'target_team_id' => null,
+                ]
+            );
+            Session::flash('success', 'Ação do time registrada com sucesso.');
+        } catch (DomainException $e) {
+            Session::flash('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            Session::flash('error', 'Não foi possível registrar a ação do time agora.');
+        }
+
+        $this->redirectTo('/liquidity/' . $id);
+    }
+
     public function advanceRound(string $id): void { if (!Csrf::verifyFromRequest()) { Session::flash('error','CSRF inválido.'); $this->redirectTo('/liquidity/' . $id);} $this->s->advanceRound((int) $id); $this->redirectTo('/liquidity/' . $id); }
     public function evaluateSemifinal(string $id): void { if (!Csrf::verifyFromRequest()) { Session::flash('error','CSRF inválido.'); $this->redirectTo('/liquidity/' . $id);} $this->s->evaluateSemifinal((int) $id); $this->redirectTo('/liquidity/' . $id); }
     public function closeFinal(string $id): void { if (!Csrf::verifyFromRequest()) { Session::flash('error','CSRF inválido.'); $this->redirectTo('/liquidity/' . $id);} $this->s->closeFinal((int) $id); $this->redirectTo('/liquidity/' . $id); }
