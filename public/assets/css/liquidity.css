@@ -535,3 +535,342 @@ th {
     background: #94a3b8;
     cursor: wait;
 }
+
+/* Projector mode: read-only classroom view for Liquidity Pool. */
+.liquidity-projector-body {
+    margin: 0;
+    min-height: 100vh;
+    background: #07111f;
+    color: #e5edf7;
+}
+
+.projector-shell {
+    width: min(1880px, calc(100vw - 40px));
+    margin: 0 auto;
+    padding: 22px 0 28px;
+    display: grid;
+    gap: 18px;
+    font-size: clamp(17px, 1.2vw, 22px);
+}
+
+.projector-hero,
+.projector-card {
+    border: 1px solid rgba(148, 163, 184, .28);
+    border-radius: 24px;
+    background: rgba(15, 23, 42, .94);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, .26);
+}
+
+.projector-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 22px;
+    align-items: center;
+    padding: 28px 32px;
+    background: linear-gradient(135deg, #0f172a 0%, #075985 52%, #0f766e 100%);
+}
+
+.projector-hero h1 {
+    margin: 4px 0 16px;
+    color: #fff;
+    font-size: clamp(2.3rem, 4.2vw, 5rem);
+    line-height: 1;
+    letter-spacing: -.05em;
+}
+
+.projector-kicker {
+    margin: 0;
+    color: #93c5fd;
+    font-size: .82em;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+}
+
+.projector-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.projector-hero-meta span,
+.projector-round-pill,
+.projector-stat-grid div,
+.projector-empty-state,
+.projector-winner-box {
+    border: 1px solid rgba(191, 219, 254, .22);
+    border-radius: 18px;
+    background: rgba(15, 23, 42, .62);
+}
+
+.projector-hero-meta span {
+    padding: 10px 14px;
+    color: #eff6ff;
+    font-weight: 850;
+}
+
+.projector-round-pill {
+    min-width: 170px;
+    padding: 18px;
+    text-align: center;
+}
+
+.projector-round-pill strong {
+    display: block;
+    color: #fff;
+    font-size: clamp(3rem, 5vw, 6rem);
+    line-height: .9;
+}
+
+.projector-round-pill span {
+    display: block;
+    margin-top: 10px;
+    color: #bfdbfe;
+    font-weight: 850;
+}
+
+.projector-card {
+    padding: 22px;
+}
+
+.projector-card h2,
+.projector-card h3 {
+    margin: 3px 0 0;
+    color: #f8fafc;
+}
+
+.projector-card h2 {
+    font-size: clamp(1.55rem, 2.2vw, 2.5rem);
+}
+
+.projector-card h3 {
+    font-size: 1.1em;
+}
+
+.projector-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.projector-stat-grid {
+    display: grid;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.projector-stat-grid-four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.projector-stat-grid-five {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin-bottom: 0;
+}
+
+.projector-stat-grid div {
+    padding: 18px;
+    background: rgba(30, 41, 59, .92);
+}
+
+.projector-stat-grid span,
+.projector-winner-box span {
+    display: block;
+    color: #cbd5e1;
+    font-size: .78em;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.projector-stat-grid strong {
+    display: block;
+    margin-top: 8px;
+    color: #fff;
+    font-size: clamp(1.6rem, 2.6vw, 3.2rem);
+    line-height: 1;
+}
+
+.projector-grid-two {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+    gap: 18px;
+}
+
+.projector-table-wrap {
+    overflow-x: auto;
+    border: 1px solid rgba(148, 163, 184, .22);
+    border-radius: 18px;
+}
+
+.projector-table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
+    color: #e5edf7;
+    background: rgba(15, 23, 42, .72);
+}
+
+.projector-table-large {
+    min-width: 1080px;
+}
+
+.projector-table th,
+.projector-table td {
+    padding: 15px 16px;
+    border-bottom: 1px solid rgba(148, 163, 184, .2);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.projector-table th {
+    background: rgba(30, 41, 59, .96);
+    color: #bfdbfe;
+    font-size: .78em;
+    font-weight: 950;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.projector-table td {
+    font-size: 1em;
+}
+
+.projector-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.projector-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: .78em;
+    font-weight: 950;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.projector-badge-done,
+.projector-badge-success,
+.projector-badge-win {
+    background: #dcfce7;
+    color: #14532d;
+}
+
+.projector-badge-wait {
+    background: #fef3c7;
+    color: #78350f;
+}
+
+.projector-badge-danger {
+    background: #fee2e2;
+    color: #7f1d1d;
+}
+
+.projector-badge-neutral {
+    background: #e0f2fe;
+    color: #0c4a6e;
+}
+
+.projector-note {
+    margin: 0 0 14px;
+    color: #cbd5e1;
+    font-weight: 750;
+}
+
+.projector-empty-state,
+.projector-winner-box {
+    display: grid;
+    gap: 8px;
+    padding: 20px;
+    color: #e2e8f0;
+    background: rgba(30, 41, 59, .92);
+}
+
+.projector-empty-state strong,
+.projector-winner-box strong {
+    color: #fff;
+    font-size: 1.2em;
+}
+
+.projector-winner-box {
+    margin-bottom: 16px;
+    border-color: rgba(74, 222, 128, .55);
+    background: linear-gradient(135deg, rgba(20, 83, 45, .85), rgba(15, 23, 42, .95));
+}
+
+.projector-feed-list {
+    list-style: none;
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+}
+
+.projector-feed-list li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    align-items: start;
+    padding: 14px;
+    border: 1px solid rgba(148, 163, 184, .22);
+    border-radius: 16px;
+    background: rgba(30, 41, 59, .88);
+}
+
+.projector-feed-list span {
+    color: #67e8f9;
+    font-weight: 950;
+}
+
+.projector-feed-list strong {
+    color: #f8fafc;
+    font-size: .95em;
+    line-height: 1.35;
+}
+
+.projector-footer {
+    color: #94a3b8;
+    font-size: .9em;
+    text-align: center;
+}
+
+@media (max-width: 1366px) {
+    .projector-shell {
+        width: min(1328px, calc(100vw - 28px));
+        gap: 14px;
+        padding-top: 14px;
+    }
+
+    .projector-hero,
+    .projector-card {
+        border-radius: 20px;
+    }
+
+    .projector-hero,
+    .projector-card {
+        padding: 18px;
+    }
+
+    .projector-table th,
+    .projector-table td {
+        padding: 11px 12px;
+    }
+}
+
+@media (max-width: 1100px) {
+    .projector-hero,
+    .projector-card-header {
+        flex-direction: column;
+    }
+
+    .projector-grid-two,
+    .projector-stat-grid-four,
+    .projector-stat-grid-five {
+        grid-template-columns: 1fr 1fr;
+    }
+}

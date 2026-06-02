@@ -163,5 +163,31 @@ final class LiquidityAdminController extends Controller
 
         $this->redirectTo('/liquidity/' . $id);
     }
-    public function projector(string $id): void { $this->view('liquidity.admin.projector', ['sessionId' => (int) $id]); }
+    public function projector(string $id): void
+    {
+        $sid = (int) $id;
+        $state = $this->s->getProjectorState($sid);
+        $session = $state['session'];
+        $round = (int) ($session['current_round'] ?? 1);
+        $teams = (new LiquidityTeamRepository())->getBySessionId($sid);
+        $currentRoundState = (new LiquidityRoundRepository())->getCurrentRound($sid, $round);
+        $actionRepo = new LiquidityActionRepository();
+        $actedByTeam = [];
+        $lastActionByTeam = [];
+
+        foreach ($teams as $team) {
+            $teamId = (int) $team['id'];
+            $actedByTeam[$teamId] = $actionRepo->hasTeamActed($sid, $round, $teamId);
+            $lastActionByTeam[$teamId] = $actionRepo->getLastActionForTeam($sid, $round, $teamId);
+        }
+
+        $this->view('liquidity.admin.projector', [
+            'pageTitle' => 'Projetor — Piscina de Liquidez',
+            'state' => $state,
+            'teams' => $teams,
+            'actedByTeam' => $actedByTeam,
+            'lastActionByTeam' => $lastActionByTeam,
+            'currentRoundState' => $currentRoundState,
+        ], 'layouts.projector');
+    }
 }
