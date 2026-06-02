@@ -94,21 +94,23 @@ final class LiquidityTeamController extends Controller
                 $sid,
                 $tid,
                 (string) ($_POST['action_type'] ?? ''),
-                (float) ($_POST['quantity'] ?? 1),
+                isset($_POST['quantity']) && $_POST['quantity'] !== '' ? (float) $_POST['quantity'] : null,
                 [
-                    'target_team_id' => isset($_POST['target_team_id']) ? (int) $_POST['target_team_id'] : null,
-                    'price' => isset($_POST['price']) ? (float) $_POST['price'] : null,
+                    'target_team_id' => isset($_POST['target_team_id']) && $_POST['target_team_id'] !== '' ? (int) $_POST['target_team_id'] : null,
+                    'price' => isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : null,
                 ]
             );
             $messages = [
                 'deposit_nft' => 'Você entrou na piscina: -1 NFT, +10 BTC, +1 cota.',
                 'withdraw_nft_btc' => 'Você retirou uma NFT usando BTC.',
                 'withdraw_nft_cash' => 'Você retirou uma NFT usando dinheiro.',
-                'buy_btc' => 'Você comprou BTC.',
-                'sell_btc' => 'Você vendeu BTC.',
-                'sell_nft' => 'Você vendeu uma NFT em mãos.',
-                'sell_share' => 'Você vendeu uma cota da piscina.',
-                'trade_nft_between_teams' => 'Você comprou 1 NFT de outra equipe.',
+                'buy_btc' => 'Você comprou BTC de outro time.',
+                'sell_btc' => 'Você vendeu BTC para outro time.',
+                'buy_nft' => 'Você comprou NFT em mãos de outro time.',
+                'sell_nft' => 'Você vendeu NFT em mãos para outro time.',
+                'buy_share' => 'Você comprou cota da piscina de outro time.',
+                'sell_share' => 'Você vendeu cota da piscina para outro time.',
+                'trade_nft_between_teams' => 'Você comprou NFT de outra equipe.',
                 'pass' => 'Você passou a vez.',
             ];
             $actionType = (string) ($_POST['action_type'] ?? '');

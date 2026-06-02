@@ -11,9 +11,11 @@ $actionLabels = [
     'withdraw_nft_cash' => 'Retirou NFT com dinheiro',
     'buy_btc' => 'Comprou BTC',
     'sell_btc' => 'Vendeu BTC',
+    'buy_nft' => 'Comprou NFT em mãos',
     'sell_nft' => 'Vendeu NFT em mãos',
+    'buy_share' => 'Comprou cota',
     'sell_share' => 'Vendeu cota',
-    'trade_nft_between_teams' => 'Comprou NFT de outro time',
+    'trade_nft_between_teams' => 'Comprou NFT em mãos',
     'pass' => 'Passou a vez',
 ];
 $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
@@ -27,6 +29,23 @@ foreach ($actedByTeam as $hasActed) {
     }
 }
 $pendingCount = max(0, $totalTeams - $actedCount);
+$teamNamesById = [];
+foreach ($teams as $team) {
+    $teamNamesById[(int)($team['id'] ?? 0)] = (string)($team['name'] ?? '-');
+}
+$describeLastAction = static function (?array $lastAction) use ($actionLabels, $teamNamesById): string {
+    if (!$lastAction) {
+        return '—';
+    }
+    $type = (string)($lastAction['action_type'] ?? '');
+    $label = $actionLabels[$type] ?? $type;
+    $targetId = (int)($lastAction['target_team_id'] ?? 0);
+    if ($targetId > 0 && isset($teamNamesById[$targetId])) {
+        $connector = in_array($type, ['buy_btc', 'buy_nft', 'buy_share', 'trade_nft_between_teams'], true) ? ' de ' : ' para ';
+        $label .= $connector . $teamNamesById[$targetId];
+    }
+    return $label ?: '—';
+};
 $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status'] ?? '') === 'closed') ? 'Encerrada' : (($totalTeams > 0 && $pendingCount === 0) ? 'Todos já agiram' : 'Em andamento');
 ?>
 <div class="liquidity-dashboard liquidity-admin-page">
@@ -105,7 +124,7 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                     $teamId = (int)$team['id'];
                     $hasTeamActed = !empty($actedByTeam[$teamId]);
                     $lastAction = $lastActionByTeam[$teamId] ?? null;
-                    $lastActionLabel = $lastAction ? ($actionLabels[$lastAction['action_type'] ?? ''] ?? (string)($lastAction['action_type'] ?? '—')) : '—';
+                    $lastActionLabel = $describeLastAction($lastAction);
                     ?>
                     <tr>
                         <td><strong><?= $e($team['name'] ?? '-') ?></strong></td>
@@ -168,7 +187,7 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                     $teamId = (int)$team['id'];
                     $hasTeamActed = !empty($actedByTeam[$teamId]);
                     $lastAction = $lastActionByTeam[$teamId] ?? null;
-                    $lastActionLabel = $lastAction ? ($actionLabels[$lastAction['action_type'] ?? ''] ?? (string)($lastAction['action_type'] ?? '—')) : '—';
+                    $lastActionLabel = $describeLastAction($lastAction);
                     ?>
                     <tr>
                         <td><strong><?= $e($team['name']) ?></strong></td>
@@ -192,12 +211,12 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
             <p class="liquidity-eyebrow">Decisão dos times</p>
             <h2>Registrar ação do time</h2>
         </div>
-        <p>Escolha a equipe, a ação da rodada e preencha somente os campos exigidos. O backend valida saldo, NFTs, cotas e bloqueia a segunda ação do mesmo time na rodada atual.</p>
+        <p>Escolha o time principal, a ação da rodada e, para operações de mercado, informe time alvo, quantidade e preço unitário. O backend valida caixa, ativos, cotas e bloqueia a segunda ação apenas do time principal.</p>
         <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/actions" class="liquidity-team-action-form" data-admin-action-form>
             <?= \App\Core\Csrf::input() ?>
             <div class="liquidity-form-grid">
                 <label>
-                    <span>Equipe</span>
+                    <span>Time principal</span>
                     <select name="team_id" required>
                         <option value="">Selecione a equipe</option>
                         <?php foreach ($teams as $team): ?>
@@ -213,10 +232,12 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                     <select name="action_type" data-action-select required>
                         <option value="deposit_nft">Depositar NFT na piscina</option>
                         <option value="withdraw_nft">Retirar NFT da piscina</option>
-                        <option value="buy_btc">Comprar BTC</option>
-                        <option value="sell_btc">Vender BTC</option>
-                        <option value="sell_nft">Vender NFT em mãos</option>
-                        <option value="sell_share">Vender cota da piscina</option>
+                        <option value="buy_btc">Comprar BTC de outro time</option>
+                        <option value="sell_btc">Vender BTC para outro time</option>
+                        <option value="buy_nft">Comprar NFT em mãos de outro time</option>
+                        <option value="sell_nft">Vender NFT em mãos para outro time</option>
+                        <option value="buy_share">Comprar cota da piscina de outro time</option>
+                        <option value="sell_share">Vender cota da piscina para outro time</option>
                         <option value="pass">Passar a vez</option>
                     </select>
                 </label>
@@ -224,20 +245,24 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                     <span>Quantidade</span>
                     <input type="number" name="quantity" min="0.01" step="0.01" value="1" inputmode="decimal">
                 </label>
+                <label data-target-field hidden>
+                    <span>Time alvo</span>
+                    <select name="target_team_id">
+                        <option value="">Selecione a contraparte</option>
+                        <?php foreach ($teams as $team): ?>
+                            <option value="<?= (int)$team['id'] ?>"><?= $e($team['name'] ?? '-') ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label data-price-field hidden>
+                    <span>Preço unitário em R$</span>
+                    <input type="number" name="price" min="0.01" step="0.01" inputmode="decimal">
+                </label>
                 <label data-payment-field hidden>
                     <span>Forma de pagamento</span>
                     <select name="payment_method">
                         <option value="btc">Pagar com 11 BTC</option>
                         <option value="cash">Pagar com R$ 2.000</option>
-                    </select>
-                </label>
-                <label>
-                    <span>Time alvo</span>
-                    <select name="target_team_id">
-                        <option value="">Não usar nesta etapa</option>
-                        <?php foreach ($teams as $team): ?>
-                            <option value="<?= (int)$team['id'] ?>"><?= $e($team['name'] ?? '-') ?></option>
-                        <?php endforeach; ?>
                     </select>
                 </label>
             </div>

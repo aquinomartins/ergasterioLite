@@ -11,11 +11,12 @@ $actionMeta = [
     'deposit_nft' => ['label' => 'Entrar na Piscina', 'copy' => 'Você entrega uma NFT ao organismo coletivo, recebe BTC e ganha uma cota.', 'effect' => ['-1 NFT', '+10 BTC', '+1 cota', '+1 NFT na piscina']],
     'withdraw_nft_btc' => ['label' => 'Retirar com BTC', 'copy' => 'Você recupera um ativo, mas reduz a profundidade da piscina.', 'effect' => ['-11 BTC', '-1 cota', '+1 NFT', '-1 NFT da piscina']],
     'withdraw_nft_cash' => ['label' => 'Retirar com dinheiro', 'copy' => 'Você usa caixa para sair da exposição coletiva.', 'effect' => ['-R$ 2.000,00', '-1 cota', '+1 NFT', '-1 NFT da piscina']],
-    'buy_btc' => ['label' => 'Comprar BTC', 'copy' => 'Você troca caixa por poder de retirada.', 'effect' => ['-R$ 120 por BTC', '+BTC'], 'quantity' => true],
-    'sell_btc' => ['label' => 'Vender BTC', 'copy' => 'Você transforma liquidez em caixa imediato.', 'effect' => ['-BTC', '+R$ 100 por BTC'], 'quantity' => true],
-    'sell_nft' => ['label' => 'Vender NFT', 'copy' => 'Você vende um ativo bruto para reforçar o caixa.', 'effect' => ['-1 NFT', '+R$ 1.800,00']],
-    'sell_share' => ['label' => 'Vender cota', 'copy' => 'Você reduz sua participação no organismo coletivo.', 'effect' => ['-1 cota', '+R$ 500,00', '-1 cota total da piscina']],
-    'trade_nft_between_teams' => ['label' => 'Comprar NFT de outro time', 'copy' => 'Na versão beta, a compra é direta e executada imediatamente.', 'effect' => ['-R$ preço informado', '+1 NFT em mãos'], 'trade' => true],
+    'buy_btc' => ['label' => 'Comprar BTC de outro time', 'copy' => 'Você compra BTC de outra equipe usando caixa.', 'effect' => ['-R$ preço combinado', '+BTC'], 'market' => true, 'target' => 'Time vendedor'],
+    'sell_btc' => ['label' => 'Vender BTC para outro time', 'copy' => 'Você vende BTC para outra equipe e recebe caixa.', 'effect' => ['-BTC', '+R$ preço combinado'], 'market' => true, 'target' => 'Time comprador'],
+    'buy_nft' => ['label' => 'Comprar NFT em mãos', 'copy' => 'Você compra NFT em mãos de outra equipe.', 'effect' => ['-R$ preço combinado', '+NFT em mãos'], 'market' => true, 'target' => 'Time vendedor'],
+    'sell_nft' => ['label' => 'Vender NFT em mãos', 'copy' => 'Você vende NFT em mãos para outra equipe.', 'effect' => ['-NFT em mãos', '+R$ preço combinado'], 'market' => true, 'target' => 'Time comprador'],
+    'buy_share' => ['label' => 'Comprar cota da piscina', 'copy' => 'Você compra cota pertencente a outra equipe.', 'effect' => ['-R$ preço combinado', '+cota'], 'market' => true, 'target' => 'Time vendedor'],
+    'sell_share' => ['label' => 'Vender cota da piscina', 'copy' => 'Você vende uma cota sua para outra equipe sem alterar o total da piscina.', 'effect' => ['-cota', '+R$ preço combinado'], 'market' => true, 'target' => 'Time comprador'],
     'pass' => ['label' => 'Passar a vez', 'copy' => 'Você observa o mercado sem se mover.', 'effect' => ['Sem efeito econômico imediato']],
 ];
 ?>
@@ -60,15 +61,15 @@ $actionMeta = [
                     <h3><?= $e($meta['label']) ?></h3>
                     <p><?= $e($meta['copy']) ?></p>
                     <ul class="action-effect"><?php foreach ($meta['effect'] as $effect): ?><li><?= $e($effect) ?></li><?php endforeach; ?></ul>
-                    <?php if (!empty($meta['quantity'])): ?><input type="number" name="quantity" min="1" step="1" value="1" <?= $hasActed ? 'disabled' : '' ?> required><?php endif; ?>
-                    <?php if (!empty($meta['trade'])): ?>
+                    <?php if (!empty($meta['market'])): ?>
+                        <input type="number" name="quantity" min="0.01" step="0.01" value="1" placeholder="Quantidade" <?= $hasActed ? 'disabled' : '' ?> required>
                         <select name="target_team_id" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
-                            <option value="">Time vendedor</option>
-                            <?php foreach ($ranking as $seller): if ((int)($seller['id'] ?? 0) === $teamId) continue; ?>
-                                <option value="<?= (int)$seller['id'] ?>"><?= $e($seller['name'] ?? '-') ?></option>
+                            <option value=""><?= $e($meta['target'] ?? 'Time alvo') ?></option>
+                            <?php foreach ($ranking as $counterparty): if ((int)($counterparty['id'] ?? 0) === $teamId) continue; ?>
+                                <option value="<?= (int)$counterparty['id'] ?>"><?= $e($counterparty['name'] ?? '-') ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <input type="number" name="price" min="0.01" step="0.01" placeholder="Preço em R$" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
+                        <input type="number" name="price" min="0.01" step="0.01" placeholder="Preço unitário em R$" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
                     <?php endif; ?>
                     <button type="submit" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?>><?= $e($meta['label']) ?></button>
                 </form>
