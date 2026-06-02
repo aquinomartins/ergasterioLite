@@ -75,9 +75,10 @@ final class LiquidityAdminController extends Controller
                 (int) $id,
                 (int) ($_POST['team_id'] ?? 0),
                 $actionType,
-                (float) ($_POST['quantity'] ?? 1),
+                isset($_POST['quantity']) && $_POST['quantity'] !== '' ? (float) $_POST['quantity'] : null,
                 [
-                    'target_team_id' => null,
+                    'target_team_id' => isset($_POST['target_team_id']) && $_POST['target_team_id'] !== '' ? (int) $_POST['target_team_id'] : null,
+                    'price' => isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : null,
                 ]
             );
             Session::flash('success', 'Ação do time registrada com sucesso.');
