@@ -55,12 +55,15 @@ $phase = (string)($s['session_phase'] ?? 'regular');
 $sessionStatus = (string)($s['status'] ?? 'active');
 $semifinalEvaluated = in_array($phase, ['semifinal_evaluated', 'final', 'final_closed', 'closed'], true);
 $finalClosed = in_array($phase, ['final_closed', 'closed'], true) || $sessionStatus === 'closed';
-$phaseLabel = match (true) {
-    $finalClosed => 'Final encerrada',
-    $semifinalEvaluated => 'Semifinal avaliada',
-    $phase === 'semifinal' => 'Semifinal',
-    default => 'Em andamento',
-};
+if ($finalClosed) {
+    $phaseLabel = 'Final encerrada';
+} elseif ($semifinalEvaluated) {
+    $phaseLabel = 'Semifinal avaliada';
+} elseif ($phase === 'semifinal') {
+    $phaseLabel = 'Semifinal';
+} else {
+    $phaseLabel = 'Em andamento';
+}
 $statusLabel = $sessionStatus === 'closed' ? 'Encerrada' : 'Ativa';
 $roundStatus = (string)($currentRoundState['status'] ?? 'open');
 $roundStatusLabel = $roundStatus === 'closed' ? 'Rodada encerrada' : 'Rodada aberta';
@@ -102,31 +105,57 @@ $actionText = static function (?array $action) use ($teamNames, $formatQty, $mon
     $price = (float)($action['price'] ?? 0);
     $total = $price * (float)($action['quantity'] ?? 1);
 
-    return match ((string)($action['action_type'] ?? '')) {
-        'deposit_nft' => 'Depositou 1 NFT na piscina',
-        'withdraw_nft_btc' => 'Retirou 1 NFT pagando em BTC',
-        'withdraw_nft_cash' => 'Retirou 1 NFT pagando em reais',
-        'buy_btc' => 'Comprou ' . $qty . ' BTC de ' . $targetName . ($price > 0 ? ' por ' . $money($total) : ''),
-        'sell_btc' => 'Vendeu ' . $qty . ' BTC para ' . $targetName . ($price > 0 ? ' por ' . $money($total) : ''),
-        'buy_nft', 'trade_nft_between_teams' => 'Comprou ' . $qty . ' NFT de ' . $targetName . ($price > 0 ? ' por ' . $money($total) : ''),
-        'sell_nft' => 'Vendeu ' . $qty . ' NFT para ' . $targetName . ($price > 0 ? ' por ' . $money($total) : ''),
-        'buy_share' => 'Comprou ' . $qty . ' cota de ' . $targetName . ($price > 0 ? ' por ' . $money($total) : ''),
-        'sell_share' => 'Vendeu ' . $qty . ' cota para ' . $targetName . ($price > 0 ? ' por ' . $money($total) : ''),
-        'pass' => 'Passou a vez',
-        default => 'Ação registrada',
-    };
+    switch ((string)($action['action_type'] ?? '')) {
+        case 'deposit_nft':
+            return 'Depositou 1 NFT na piscina';
+        case 'withdraw_nft_btc':
+            return 'Retirou 1 NFT pagando em BTC';
+        case 'withdraw_nft_cash':
+            return 'Retirou 1 NFT pagando em reais';
+        case 'buy_btc':
+            return 'Comprou ' . $qty . ' BTC de ' . $targetName . ($price > 0 ? ' por ' . $money($total) : '');
+        case 'sell_btc':
+            return 'Vendeu ' . $qty . ' BTC para ' . $targetName . ($price > 0 ? ' por ' . $money($total) : '');
+        case 'buy_nft':
+        case 'trade_nft_between_teams':
+            return 'Comprou ' . $qty . ' NFT de ' . $targetName . ($price > 0 ? ' por ' . $money($total) : '');
+        case 'sell_nft':
+            return 'Vendeu ' . $qty . ' NFT para ' . $targetName . ($price > 0 ? ' por ' . $money($total) : '');
+        case 'buy_share':
+            return 'Comprou ' . $qty . ' cota de ' . $targetName . ($price > 0 ? ' por ' . $money($total) : '');
+        case 'sell_share':
+            return 'Vendeu ' . $qty . ' cota para ' . $targetName . ($price > 0 ? ' por ' . $money($total) : '');
+        case 'pass':
+            return 'Passou a vez';
+        default:
+            return 'Ação registrada';
+    }
 };
 
 $badgeClass = static function (string $status): string {
     $normalized = strtolower($status);
-    return match (true) {
-        str_contains($normalized, 'vencedor') => 'projector-badge-win',
-        str_contains($normalized, 'eliminado') => 'projector-badge-danger',
-        str_contains($normalized, 'classificado'), str_contains($normalized, 'finalista') => 'projector-badge-success',
-        str_contains($normalized, 'aguardando') => 'projector-badge-wait',
-        str_contains($normalized, 'agiu') => 'projector-badge-done',
-        default => 'projector-badge-neutral',
-    };
+
+    if (strpos($normalized, 'vencedor') !== false) {
+        return 'projector-badge-win';
+    }
+
+    if (strpos($normalized, 'eliminado') !== false) {
+        return 'projector-badge-danger';
+    }
+
+    if (strpos($normalized, 'classificado') !== false || strpos($normalized, 'finalista') !== false) {
+        return 'projector-badge-success';
+    }
+
+    if (strpos($normalized, 'aguardando') !== false) {
+        return 'projector-badge-wait';
+    }
+
+    if (strpos($normalized, 'agiu') !== false) {
+        return 'projector-badge-done';
+    }
+
+    return 'projector-badge-neutral';
 };
 ?>
 <div class="projector-shell" id="projector" data-session-id="<?= (int)($s['id'] ?? 0) ?>">
