@@ -14,23 +14,27 @@ use DomainException;
 
 final class LiquidityAdminController extends Controller
 {
-    private LiquidityPoolService $s;
-    private LiquidityPredictionMarketService $pred;
+    private ?LiquidityPoolService $s = null;
+    private ?LiquidityPredictionMarketService $pred = null;
 
-    public function __construct()
+    private function liquidityService(): LiquidityPoolService
     {
-        $this->s = new LiquidityPoolService();
-        $this->pred = new LiquidityPredictionMarketService();
+        return $this->s ??= new LiquidityPoolService();
+    }
+
+    private function predictionService(): LiquidityPredictionMarketService
+    {
+        return $this->pred ??= new LiquidityPredictionMarketService();
     }
 
     public function index(): void { $this->view('liquidity.admin.index', ['sessions' => (new \App\Repositories\LiquiditySessionRepository())->getAll()]); }
     public function create(): void { $this->view('liquidity.admin.create'); }
-    public function store(): void { try { $se = $this->s->createSession($_POST, null); $this->redirectTo('/liquidity/' . $se['id']); } catch (DomainException $e) { Session::flash('error', $e->getMessage()); $this->redirectTo('/liquidity/create'); } }
+    public function store(): void { try { $se = $this->liquidityService()->createSession($_POST, null); $this->redirectTo('/liquidity/' . $se['id']); } catch (DomainException $e) { Session::flash('error', $e->getMessage()); $this->redirectTo('/liquidity/create'); } }
 
     public function show(string $id): void
     {
         $sid = (int) $id;
-        $state = $this->s->getProjectorState($sid);
+        $state = $this->liquidityService()->getProjectorState($sid);
         $session = $state['session'];
         $round = (int) ($session['current_round'] ?? 1);
         $teams = (new LiquidityTeamRepository())->getBySessionId($sid);
@@ -50,12 +54,12 @@ final class LiquidityAdminController extends Controller
             'actedByTeam' => $actedByTeam,
             'lastActionByTeam' => $lastActionByTeam,
             'currentRoundState' => $currentRoundState,
-            'predictionMarkets' => $this->pred->getMarketsForSession($sid),
+            'predictionMarkets' => $this->predictionService()->getMarketsForSession($sid),
         ]);
     }
 
     public function teams(string $id): void { $this->view('liquidity.admin.teams', ['sessionId' => (int) $id, 'teams' => (new LiquidityTeamRepository())->getBySessionId((int) $id)]); }
-    public function createTeam(string $id): void { $this->s->createTeam((int) $id, (string) ($_POST['name'] ?? '')); $this->redirectTo('/liquidity/' . $id . '/teams'); }
+    public function createTeam(string $id): void { $this->liquidityService()->createTeam((int) $id, (string) ($_POST['name'] ?? '')); $this->redirectTo('/liquidity/' . $id . '/teams'); }
 
     public function registerTeamAction(string $id): void
     {
@@ -71,7 +75,7 @@ final class LiquidityAdminController extends Controller
         }
 
         try {
-            $this->s->submitTeamAction(
+            $this->liquidityService()->submitTeamAction(
                 (int) $id,
                 (int) ($_POST['team_id'] ?? 0),
                 $actionType,
@@ -99,7 +103,7 @@ final class LiquidityAdminController extends Controller
         }
 
         try {
-            $this->s->advanceRound((int) $id);
+            $this->liquidityService()->advanceRound((int) $id);
             Session::flash('success', 'Rodada encerrada com sucesso.');
         } catch (DomainException $e) {
             Session::flash('error', $e->getMessage());
@@ -117,7 +121,7 @@ final class LiquidityAdminController extends Controller
         }
 
         try {
-            $result = $this->s->evaluateSemifinal((int) $id);
+            $result = $this->liquidityService()->evaluateSemifinal((int) $id);
             Session::flash(
                 'success',
                 !empty($result['reevaluated'])
@@ -140,7 +144,7 @@ final class LiquidityAdminController extends Controller
         }
 
         try {
-            $this->s->closeFinal((int) $id);
+            $this->liquidityService()->closeFinal((int) $id);
             Session::flash('success', 'Final encerrada com sucesso.');
         } catch (DomainException $e) {
             Session::flash('error', $e->getMessage());
@@ -153,7 +157,7 @@ final class LiquidityAdminController extends Controller
     public function closeSession(string $id): void
     {
         try {
-            $this->s->closeSession((int) $id);
+            $this->liquidityService()->closeSession((int) $id);
             Session::flash('success', 'Sessão encerrada com sucesso.');
         } catch (DomainException $e) {
             Session::flash('error', $e->getMessage());
@@ -166,28 +170,44 @@ final class LiquidityAdminController extends Controller
     public function projector(string $id): void
     {
         $sid = (int) $id;
-        $state = $this->s->getProjectorState($sid);
-        $session = $state['session'];
-        $round = (int) ($session['current_round'] ?? 1);
-        $teams = (new LiquidityTeamRepository())->getBySessionId($sid);
-        $currentRoundState = (new LiquidityRoundRepository())->getCurrentRound($sid, $round);
-        $actionRepo = new LiquidityActionRepository();
-        $actedByTeam = [];
-        $lastActionByTeam = [];
 
-        foreach ($teams as $team) {
-            $teamId = (int) $team['id'];
-            $actedByTeam[$teamId] = $actionRepo->hasTeamActed($sid, $round, $teamId);
-            $lastActionByTeam[$teamId] = $actionRepo->getLastActionForTeam($sid, $round, $teamId);
+        try {
+            $state = $this->liquidityService()->getProjectorState($sid);
+            $session = $state['session'];
+            $round = (int) ($session['current_round'] ?? 1);
+            $teams = (new LiquidityTeamRepository())->getBySessionId($sid);
+            $currentRoundState = (new LiquidityRoundRepository())->getCurrentRound($sid, $round);
+            $actionRepo = new LiquidityActionRepository();
+            $actedByTeam = [];
+            $lastActionByTeam = [];
+
+            foreach ($teams as $team) {
+                $teamId = (int) $team['id'];
+                $actedByTeam[$teamId] = $actionRepo->hasTeamActed($sid, $round, $teamId);
+                $lastActionByTeam[$teamId] = $actionRepo->getLastActionForTeam($sid, $round, $teamId);
+            }
+
+            $this->view('liquidity.admin.projector', [
+                'pageTitle' => 'Projetor — Piscina de Liquidez',
+                'state' => $state,
+                'teams' => $teams,
+                'actedByTeam' => $actedByTeam,
+                'lastActionByTeam' => $lastActionByTeam,
+                'currentRoundState' => $currentRoundState,
+            ], 'layouts.projector');
+        } catch (DomainException $e) {
+            http_response_code(404);
+            $this->view('liquidity.admin.projector', [
+                'pageTitle' => 'Projetor — Piscina de Liquidez',
+                'projectorError' => 'Piscina não encontrada.',
+            ], 'layouts.projector');
+        } catch (\Throwable $e) {
+            error_log('Erro ao carregar projetor da piscina ' . $sid . ': ' . $e->getMessage());
+            http_response_code(500);
+            $this->view('liquidity.admin.projector', [
+                'pageTitle' => 'Projetor — Piscina de Liquidez',
+                'projectorError' => 'Não foi possível carregar os dados da piscina agora.',
+            ], 'layouts.projector');
         }
-
-        $this->view('liquidity.admin.projector', [
-            'pageTitle' => 'Projetor — Piscina de Liquidez',
-            'state' => $state,
-            'teams' => $teams,
-            'actedByTeam' => $actedByTeam,
-            'lastActionByTeam' => $lastActionByTeam,
-            'currentRoundState' => $currentRoundState,
-        ], 'layouts.projector');
     }
 }
