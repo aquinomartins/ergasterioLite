@@ -28,13 +28,26 @@ if (!empty($projectorError)) {
 $state = $state ?? [];
 $s = $state['session'] ?? [];
 $pool = $state['pool'] ?? [];
-$ranking = $state['ranking'] ?? [];
 $finalRanking = $state['final_ranking'] ?? [];
 $feed = array_slice($state['feed'] ?? [], 0, 8);
 $teams = $teams ?? [];
 $actedByTeam = $actedByTeam ?? [];
 $lastActionByTeam = $lastActionByTeam ?? [];
 $currentRoundState = $currentRoundState ?? null;
+
+$projectorRanking = $teams;
+foreach ($projectorRanking as &$rankingTeam) {
+    $rankingTeam['projector_estimated_wealth'] = (float)($rankingTeam['cash_balance'] ?? 0)
+        + ((float)($rankingTeam['btc_balance'] ?? 0) * 100)
+        + ((int)($rankingTeam['nft_balance'] ?? 0) * 1800)
+        + ((int)($rankingTeam['pool_shares'] ?? 0) * 500);
+}
+unset($rankingTeam);
+usort($projectorRanking, static fn(array $a, array $b): int =>
+    ((float)$b['projector_estimated_wealth'] <=> (float)$a['projector_estimated_wealth'])
+    ?: ((float)($b['cash_balance'] ?? 0) <=> (float)($a['cash_balance'] ?? 0))
+    ?: ((string)($a['name'] ?? '') <=> (string)($b['name'] ?? ''))
+);
 
 $currentRound = (int)($s['current_round'] ?? 1);
 $totalRounds = (int)($s['total_rounds'] ?? 0);
@@ -63,10 +76,8 @@ $pendingCount = max(0, $totalTeams - $actedCount);
 
 $poolNfts = (int)($pool['pool_nfts'] ?? 0);
 $totalShares = (int)($pool['total_shares'] ?? 0);
-$nftPoolValue = (float)($s['nft_pool_value'] ?? 2000);
-$poolYieldRate = (float)($s['pool_yield_rate'] ?? 0.10);
-$poolTotalValue = $poolNfts * $nftPoolValue;
-$totalYield = $poolTotalValue * $poolYieldRate;
+$poolTotalValue = $poolNfts * 2000;
+$totalYield = $poolTotalValue * 0.10;
 $yieldPerShare = $totalShares > 0 ? $totalYield / $totalShares : 0.0;
 
 $teamNames = [];
@@ -122,8 +133,10 @@ $badgeClass = static function (string $status): string {
     <header class="projector-hero">
         <div>
             <p class="projector-kicker">Modo projetor · somente leitura</p>
-            <h1>Piscina de Liquidez — <?= $e($s['name'] ?? ('Piscina ' . ($s['id'] ?? ''))) ?></h1>
+            <h1>Piscina de Liquidez — Modo Projetor</h1>
             <div class="projector-hero-meta">
+                <span>Nome: <?= $e($s['name'] ?? ('Piscina ' . ($s['id'] ?? ''))) ?></span>
+                <span>Código: <?= $e($s['access_code'] ?? '-') ?></span>
                 <span>Rodada <?= $currentRound ?><?= $totalRounds > 0 ? '/' . $totalRounds : '' ?></span>
                 <span>Fase: <?= $e($phaseLabel) ?></span>
                 <span>Status: <?= $e($statusLabel) ?></span>
@@ -193,7 +206,7 @@ $badgeClass = static function (string $status): string {
         </div>
         <div class="projector-table-wrap">
             <table class="projector-table projector-table-large">
-                <thead><tr><th>Equipe</th><th>Caixa R$</th><th>BTC</th><th>NFTs em mãos</th><th>Cotas</th><th>Ação</th><th>Status</th></tr></thead>
+                <thead><tr><th>Equipe</th><th>Caixa R$</th><th>BTC</th><th>NFTs em mãos</th><th>Cotas</th><th>Ação usada?</th><th>Status</th></tr></thead>
                 <tbody>
                     <?php foreach ($teams as $team): ?>
                         <?php
@@ -233,17 +246,17 @@ $badgeClass = static function (string $status): string {
                 <table class="projector-table">
                     <thead><tr><th>Posição</th><th>Equipe</th><th>Patrimônio estimado</th><th>Caixa R$</th><th>Status</th></tr></thead>
                     <tbody>
-                        <?php foreach ($ranking as $i => $row): ?>
+                        <?php foreach ($projectorRanking as $i => $row): ?>
                             <?php $status = (string)($row['display_status'] ?? 'Em jogo'); ?>
                             <tr>
-                                <td><strong>#<?= (int)($row['general_position'] ?? ($i + 1)) ?></strong></td>
+                                <td><strong>#<?= $i + 1 ?></strong></td>
                                 <td><?= $e($row['name'] ?? 'Equipe') ?></td>
-                                <td><?= $money($row['estimated_wealth'] ?? $row['score'] ?? 0) ?></td>
+                                <td><?= $money($row['projector_estimated_wealth'] ?? 0) ?></td>
                                 <td><?= $money($row['cash_balance'] ?? 0) ?></td>
                                 <td><span class="projector-badge <?= $badgeClass($status) ?>"><?= $e($status) ?></span></td>
                             </tr>
                         <?php endforeach; ?>
-                        <?php if (!$ranking): ?><tr><td colspan="5">Ranking indisponível.</td></tr><?php endif; ?>
+                        <?php if (!$projectorRanking): ?><tr><td colspan="5">Ranking indisponível.</td></tr><?php endif; ?>
                     </tbody>
                 </table>
             </div>

@@ -484,7 +484,7 @@ $roundStatus = ($finalWasClosed || ($currentRoundState['status'] ?? '') === 'clo
         </div>
         <div class="action-grid liquidity-control-grid">
             <a class="action-card" href="/liquidity/<?= (int)$s['id'] ?>/teams"><h3>Gerenciar equipes</h3></a>
-            <a class="action-card" target="_blank" href="/liquidity/<?= (int)$s['id'] ?>/projector"><h3>Abrir projetor</h3></a>
+            <a class="action-card" target="_blank" rel="noopener" href="/liquidity/<?= (int)$s['id'] ?>/projector"><h3>Abrir projetor</h3></a>
             <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/advance-round" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit" <?= $finalWasClosed ? 'disabled' : '' ?>>Encerrar rodada</button></form>
             <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/evaluate-semifinal" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Avaliar semifinal</button></form>
             <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/close-final" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit" <?= $finalWasClosed ? 'disabled' : '' ?>>Encerrar final</button></form>
