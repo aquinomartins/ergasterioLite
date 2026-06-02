@@ -21,6 +21,9 @@ $actionLabels = [
 $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 $money = static fn($v): string => 'R$ ' . number_format((float)$v, 2, ',', '.');
 $percent = static fn($v): string => rtrim(rtrim(number_format(((float)$v) * 100, 2, ',', '.'), '0'), ',') . '%';
+$poolTotalValue = (int)($pool['pool_nfts'] ?? 0) * (float)($s['nft_pool_value'] ?? 0);
+$estimatedYieldTotal = $poolTotalValue * (float)($s['pool_yield_rate'] ?? 0);
+$estimatedYieldPerShare = (int)($pool['total_shares'] ?? 0) > 0 ? $estimatedYieldTotal / (int)($pool['total_shares'] ?? 0) : 0.0;
 $totalTeams = count($teams);
 $actedCount = 0;
 foreach ($actedByTeam as $hasActed) {
@@ -135,7 +138,7 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                 </tbody>
             </table>
         </div>
-        <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/advance-round" class="liquidity-inline-control action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Avançar rodada</button></form>
+        <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/advance-round" class="liquidity-inline-control action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Encerrar rodada</button></form>
     </section>
 
     <section class="liquidity-card pool-state-card <?= $e('pool-status-' . ($pool['status'] ?? 'empty')) ?>">
@@ -146,8 +149,10 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
         <div class="liquidity-stat-grid liquidity-pool-stats">
             <article class="liquidity-stat"><span>NFTs na piscina</span><strong><?= (int)($pool['pool_nfts'] ?? 0) ?></strong></article>
             <article class="liquidity-stat"><span>Cotas</span><strong><?= (int)($pool['total_shares'] ?? 0) ?></strong></article>
-            <article class="liquidity-stat"><span>Valor bloqueado</span><strong><?= $money($pool['total_value'] ?? 0) ?></strong></article>
-            <article class="liquidity-stat"><span>Rendimento por cota</span><strong><?= $money($pool['yield_per_share'] ?? 0) ?></strong></article>
+            <article class="liquidity-stat"><span>Valor total da piscina</span><strong><?= $money($poolTotalValue) ?></strong></article>
+            <article class="liquidity-stat"><span>Rendimento total estimado</span><strong><?= $money($estimatedYieldTotal) ?></strong></article>
+            <article class="liquidity-stat"><span>Rendimento por cota estimado</span><strong><?= $money($estimatedYieldPerShare) ?></strong></article>
+            <article class="liquidity-stat"><span>Valor bloqueado</span><strong><?= $money($poolTotalValue) ?></strong></article>
         </div>
     </section>
 
@@ -319,7 +324,7 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
         <div class="action-grid liquidity-control-grid">
             <a class="action-card" href="/liquidity/<?= (int)$s['id'] ?>/teams"><h3>Gerenciar equipes</h3></a>
             <a class="action-card" target="_blank" href="/liquidity/<?= (int)$s['id'] ?>/projector"><h3>Abrir projetor</h3></a>
-            <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/advance-round" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Avançar rodada</button></form>
+            <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/advance-round" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Encerrar rodada</button></form>
             <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/evaluate-semifinal" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Avaliar semifinal</button></form>
             <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/close-final" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Encerrar final</button></form>
             <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/close" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Encerrar sessão</button></form>
