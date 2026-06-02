@@ -3,12 +3,34 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 $money = static fn($v): string => 'R$ ' . number_format((float)$v, 2, ',', '.');
 $number = static fn($v, int $decimals = 0): string => number_format((float)$v, $decimals, ',', '.');
 
+if (!empty($projectorError)) {
+    ?>
+    <div class="projector-shell" id="projector">
+        <header class="projector-hero">
+            <div>
+                <p class="projector-kicker">Modo projetor · somente leitura</p>
+                <h1>Piscina de Liquidez</h1>
+                <div class="projector-hero-meta"><span>Erro de carregamento</span></div>
+            </div>
+        </header>
+
+        <section class="projector-card">
+            <div class="projector-empty-state">
+                <strong><?= $e($projectorError) ?></strong>
+                <span>Confira o endereço do projetor ou tente novamente em instantes.</span>
+            </div>
+        </section>
+    </div>
+    <?php
+    return;
+}
+
 $state = $state ?? [];
 $s = $state['session'] ?? [];
 $pool = $state['pool'] ?? [];
 $ranking = $state['ranking'] ?? [];
 $finalRanking = $state['final_ranking'] ?? [];
-$feed = array_slice($state['feed'] ?? [], 0, 10);
+$feed = array_slice($state['feed'] ?? [], 0, 8);
 $teams = $teams ?? [];
 $actedByTeam = $actedByTeam ?? [];
 $lastActionByTeam = $lastActionByTeam ?? [];
