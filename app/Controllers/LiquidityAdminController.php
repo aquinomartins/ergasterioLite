@@ -92,7 +92,29 @@ final class LiquidityAdminController extends Controller
     }
 
     public function advanceRound(string $id): void { if (!Csrf::verifyFromRequest()) { Session::flash('error','CSRF inválido.'); $this->redirectTo('/liquidity/' . $id);} $this->s->advanceRound((int) $id); $this->redirectTo('/liquidity/' . $id); }
-    public function evaluateSemifinal(string $id): void { if (!Csrf::verifyFromRequest()) { Session::flash('error','CSRF inválido.'); $this->redirectTo('/liquidity/' . $id);} $this->s->evaluateSemifinal((int) $id); $this->redirectTo('/liquidity/' . $id); }
+    public function evaluateSemifinal(string $id): void
+    {
+        if (!Csrf::verifyFromRequest()) {
+            Session::flash('error', 'CSRF inválido.');
+            $this->redirectTo('/liquidity/' . $id);
+        }
+
+        try {
+            $result = $this->s->evaluateSemifinal((int) $id);
+            Session::flash(
+                'success',
+                !empty($result['reevaluated'])
+                    ? 'Semifinal reavaliada com sucesso.'
+                    : 'Semifinal avaliada com sucesso.'
+            );
+        } catch (DomainException $e) {
+            Session::flash('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            Session::flash('error', 'Não foi possível avaliar a semifinal agora.');
+        }
+
+        $this->redirectTo('/liquidity/' . $id);
+    }
     public function closeFinal(string $id): void { if (!Csrf::verifyFromRequest()) { Session::flash('error','CSRF inválido.'); $this->redirectTo('/liquidity/' . $id);} $this->s->closeFinal((int) $id); $this->redirectTo('/liquidity/' . $id); }
     public function closeSession(string $id): void { $this->s->closeSession((int) $id); $this->redirectTo('/liquidity/' . $id); }
     public function projector(string $id): void { $this->view('liquidity.admin.projector', ['sessionId' => (int) $id]); }

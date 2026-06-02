@@ -25,7 +25,7 @@ $actionMeta = [
         <h1>Piscina de Liquidez — <?= $e($session['name'] ?? 'Sessão') ?></h1>
         <p>Equipe: <strong><?= $e($team['name'] ?? '-') ?></strong></p>
         <p>Rodada <strong><?= (int) $currentRound ?></strong> de <?= (int) ($session['total_rounds'] ?? 0) ?> · Fase: <strong><?= $e($session['session_phase'] ?? 'regular') ?></strong> · Status: <strong><?= $e($session['status'] ?? '-') ?></strong></p>
-        <?php if (!empty($team['is_eliminated'])): ?><p class="warning-text">Seu time foi eliminado na semifinal.</p><?php endif; ?>
+        <?php if (!empty($team['is_eliminated'])): ?><p class="warning-text">Este time foi eliminado na semifinal e não pode mais realizar ações.</p><?php endif; ?>
         <?php if ($hasActed): ?><p class="warning-text">Este time já usou sua ação nesta rodada. Aguarde o professor avançar para a próxima rodada.</p><?php endif; ?>
     </section>
 
@@ -55,14 +55,14 @@ $actionMeta = [
         <?php if ($lastAction): ?><p>Última ação registrada: <strong><?= $e($lastAction['action_type'] ?? '-') ?></strong> (qtd: <?= number_format((float)($lastAction['quantity'] ?? 0), 2, ',', '.') ?>)</p><?php endif; ?>
         <div class="action-grid">
             <?php foreach ($actionMeta as $type => $meta): ?>
-                <form method="POST" action="/liquidity/team/action" class="action-card <?= $hasActed ? 'action-disabled' : '' ?>">
+                <form method="POST" action="/liquidity/team/action" class="action-card <?= ($hasActed || !empty($team['is_eliminated'])) ? 'action-disabled' : '' ?>">
                     <?= \App\Core\Csrf::input() ?>
                     <input type="hidden" name="action_type" value="<?= $e($type) ?>">
                     <h3><?= $e($meta['label']) ?></h3>
                     <p><?= $e($meta['copy']) ?></p>
                     <ul class="action-effect"><?php foreach ($meta['effect'] as $effect): ?><li><?= $e($effect) ?></li><?php endforeach; ?></ul>
                     <?php if (!empty($meta['market'])): ?>
-                        <input type="number" name="quantity" min="0.01" step="0.01" value="1" placeholder="Quantidade" <?= $hasActed ? 'disabled' : '' ?> required>
+                        <input type="number" name="quantity" min="0.01" step="0.01" value="1" placeholder="Quantidade" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
                         <select name="target_team_id" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
                             <option value=""><?= $e($meta['target'] ?? 'Time alvo') ?></option>
                             <?php foreach ($ranking as $counterparty): if ((int)($counterparty['id'] ?? 0) === $teamId) continue; ?>

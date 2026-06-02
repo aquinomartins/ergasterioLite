@@ -29,10 +29,10 @@ final class LiquidityPoolService {
         $t=$this->teams->findById($tid);
         $p=$this->pool->findBySessionId($sid);
         if(!$t||!$p||(int)$t['session_id']!==$sid) throw new DomainException('Equipe inválida.');
-        if((int)($t['is_eliminated']??0)===1) throw new DomainException('Equipe eliminada não pode agir.');
+        if((int)($t['is_eliminated']??0)===1) throw new DomainException('Este time foi eliminado na semifinal e não pode mais realizar ações.');
 
         $phase=(string)($s['session_phase']??'regular');
-        if(!in_array($phase,['regular','semifinal','final'],true)) throw new DomainException('Fase encerrada.');
+        if(!in_array($phase,['regular','semifinal','semifinal_evaluated','final'],true)) throw new DomainException('Fase encerrada.');
 
         $r=(int)$s['current_round'];
         if(!$this->rounds->hasOpenRound($sid,$r)) throw new DomainException('Rodada encerrada. Aguarde o professor iniciar a próxima rodada.');
@@ -141,7 +141,51 @@ final class LiquidityPoolService {
             throw $e;
         }
     }
-    public function evaluateSemifinal($sid):void{$s=$this->mustSession((int)$sid);$teams=$this->teams->getBySessionId((int)$sid);foreach($teams as $t){$ok=(int)$t['nft_balance']>=1; $this->pdo->prepare('UPDATE liquidity_teams SET is_eliminated=?, qualified_for_final=?, updated_at=NOW() WHERE id=?')->execute([$ok?0:1,$ok?1:0,(int)$t['id']]); $this->events->create((int)$sid,(int)$s['current_round'],(int)$t['id'],'semifinal',$ok?'Equipe '.$t['name'].' passou para a final.':'Equipe '.$t['name'].' foi eliminada na semifinal por não ter NFT em mãos.',0,0,0,0);} $this->pdo->prepare("UPDATE liquidity_sessions SET session_phase='final', updated_at=NOW() WHERE id=?")->execute([(int)$sid]);}
+    public function evaluateSemifinal($sid):array{
+        $sid=(int)$sid;
+        $s=$this->mustSession($sid);
+        if(($s['status']??'')==='closed'||($s['session_phase']??'')==='closed')throw new DomainException('A final já foi encerrada.');
+
+        $round=(int)$s['current_round'];
+        $wasEvaluated=in_array((string)($s['session_phase']??'regular'),['semifinal_evaluated','final'],true);
+
+        $this->pdo->beginTransaction();
+        try{
+            $teams=$this->teams->getBySessionId($sid);
+            $classified=0;
+            $eliminated=0;
+
+            $this->events->create($sid,$round,null,$wasEvaluated?'semifinal_reevaluated':'semifinal_evaluated',$wasEvaluated?'Semifinal reavaliada.':'Semifinal avaliada.',0,0,0,0);
+
+            foreach($teams as $t){
+                $nftsInHand=(int)$t['nft_balance'];
+                $ok=$nftsInHand>=1;
+                if($ok){$classified++;}else{$eliminated++;}
+
+                $this->pdo->prepare('UPDATE liquidity_teams SET is_eliminated=?, qualified_for_final=?, updated_at=NOW() WHERE id=?')->execute([$ok?0:1,$ok?1:0,(int)$t['id']]);
+                $this->events->create(
+                    $sid,
+                    $round,
+                    (int)$t['id'],
+                    $ok?'semifinal_classified':'semifinal_eliminated',
+                    $ok
+                        ? 'Time '.$t['name'].' classificado para a final com '.$nftsInHand.' '.($nftsInHand===1?'NFT':'NFTs').' em mãos.'
+                        : 'Time '.$t['name'].' eliminado na semifinal por não possuir NFT em mãos.',
+                    0,
+                    0,
+                    0,
+                    0
+                );
+            }
+
+            $this->pdo->prepare("UPDATE liquidity_sessions SET session_phase='semifinal_evaluated', updated_at=NOW() WHERE id=?")->execute([$sid]);
+            $this->pdo->commit();
+            return ['classified'=>$classified,'eliminated'=>$eliminated,'reevaluated'=>$wasEvaluated];
+        }catch(\Throwable $e){
+            if($this->pdo->inTransaction())$this->pdo->rollBack();
+            throw $e;
+        }
+    }
     public function closeFinal($sid):void{$s=$this->mustSession((int)$sid);$teams=$this->teams->getBySessionId((int)$sid);usort($teams,fn($a,$b)=>(float)$b['cash_balance']<=>(float)$a['cash_balance']);$w=$teams[0]??null;foreach($teams as $t){$this->teams->updateFinalScore((int)$t['id'],(float)$t['cash_balance']);} if($w){$this->events->create((int)$sid,(int)$s['current_round'],(int)$w['id'],'final_winner','Equipe '.$w['name'].' venceu a final com R$ '.number_format((float)$w['cash_balance'],2,',','.'),0,0,0,0);} $this->pdo->prepare("UPDATE liquidity_sessions SET session_phase='closed', status='closed', updated_at=NOW() WHERE id=?")->execute([(int)$sid]);}
     public function calculatePartialScore($t,$s):float{return (float)$t['cash_balance']+((float)$t['btc_balance']*(float)$s['btc_sell_price'])+((int)$t['nft_balance']*(float)$s['nft_sell_price'])+((int)$t['pool_shares']*(float)$s['share_sell_price']);}
     public function calculateFinalCashScore($t):float{return (float)$t['cash_balance'];}

@@ -25,13 +25,29 @@ $poolTotalValue = (int)($pool['pool_nfts'] ?? 0) * (float)($s['nft_pool_value'] 
 $estimatedYieldTotal = $poolTotalValue * (float)($s['pool_yield_rate'] ?? 0);
 $estimatedYieldPerShare = (int)($pool['total_shares'] ?? 0) > 0 ? $estimatedYieldTotal / (int)($pool['total_shares'] ?? 0) : 0.0;
 $totalTeams = count($teams);
+$actionableTeamIds = [];
+$semifinalClassifiedCount = 0;
+$semifinalEliminatedCount = 0;
+foreach ($teams as $team) {
+    $teamId = (int)($team['id'] ?? 0);
+    if (!empty($team['is_eliminated'])) {
+        $semifinalEliminatedCount++;
+        continue;
+    }
+    if (!empty($team['qualified_for_final'])) {
+        $semifinalClassifiedCount++;
+    }
+    $actionableTeamIds[] = $teamId;
+}
 $actedCount = 0;
-foreach ($actedByTeam as $hasActed) {
-    if (!empty($hasActed)) {
+foreach ($actionableTeamIds as $teamId) {
+    if (!empty($actedByTeam[$teamId])) {
         $actedCount++;
     }
 }
-$pendingCount = max(0, $totalTeams - $actedCount);
+$actionableTeamsCount = count($actionableTeamIds);
+$pendingCount = max(0, $actionableTeamsCount - $actedCount);
+$semifinalWasEvaluated = in_array((string)($s['session_phase'] ?? 'regular'), ['semifinal_evaluated', 'final', 'closed'], true) || $semifinalClassifiedCount > 0 || $semifinalEliminatedCount > 0;
 $teamNamesById = [];
 foreach ($teams as $team) {
     $teamNamesById[(int)($team['id'] ?? 0)] = (string)($team['name'] ?? '-');
@@ -49,7 +65,7 @@ $describeLastAction = static function (?array $lastAction) use ($actionLabels, $
     }
     return $label ?: '—';
 };
-$roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status'] ?? '') === 'closed') ? 'Encerrada' : (($totalTeams > 0 && $pendingCount === 0) ? 'Todos já agiram' : 'Em andamento');
+$roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status'] ?? '') === 'closed') ? 'Encerrada' : (($actionableTeamsCount > 0 && $pendingCount === 0) ? 'Todos já agiram' : 'Em andamento');
 ?>
 <div class="liquidity-dashboard liquidity-admin-page">
     <section class="liquidity-card liquidity-hero-card">
@@ -59,7 +75,7 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
             <div class="liquidity-meta-grid">
                 <span><strong>Código:</strong> <?= $e($s['access_code'] ?? '-') ?></span>
                 <span><strong>Rodada:</strong> <?= (int)($s['current_round'] ?? 0) ?>/<?= (int)($s['total_rounds'] ?? 0) ?></span>
-                <span><strong>Fase:</strong> <?= $e($s['session_phase'] ?? 'regular') ?></span>
+                <span><strong>Fase:</strong> <?= $e(($s['session_phase'] ?? 'regular') === 'semifinal_evaluated' ? 'semifinal avaliada' : ($s['session_phase'] ?? 'regular')) ?></span>
                 <span><strong>Status:</strong> <?= $e($s['status'] ?? '-') ?></span>
             </div>
         </div>
@@ -115,7 +131,7 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                 <strong><?= $e($roundStatus) ?></strong>
             </article>
         </div>
-        <?php if ($totalTeams > 0 && $pendingCount === 0): ?>
+        <?php if ($actionableTeamsCount > 0 && $pendingCount === 0): ?>
             <p class="round-ready-message">Todos os times já agiram. A rodada pode ser encerrada.</p>
         <?php endif; ?>
         <div class="liquidity-table-wrap liquidity-round-state-table">
@@ -156,6 +172,53 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
         </div>
     </section>
 
+
+    <section class="liquidity-card liquidity-semifinal-card">
+        <div class="liquidity-card-header">
+            <p class="liquidity-eyebrow">Critério eliminatório</p>
+            <h2>Semifinal</h2>
+        </div>
+        <p><strong>Para passar na semifinal, o time precisa ter pelo menos 1 NFT em mãos.</strong><br>NFT dentro da piscina não conta.</p>
+        <div class="liquidity-stat-grid">
+            <article class="liquidity-stat liquidity-stat-success"><span>Classificados</span><strong><?= $semifinalClassifiedCount ?></strong></article>
+            <article class="liquidity-stat liquidity-stat-warning"><span>Eliminados</span><strong><?= $semifinalEliminatedCount ?></strong></article>
+            <article class="liquidity-stat"><span>Status</span><strong><?= $semifinalWasEvaluated ? 'Avaliada' : 'Pendente' ?></strong></article>
+        </div>
+        <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/evaluate-semifinal" class="liquidity-inline-control action-card">
+            <?= \App\Core\Csrf::input() ?>
+            <button type="submit">Avaliar semifinal</button>
+        </form>
+        <div class="liquidity-table-wrap">
+            <table class="liquidity-table">
+                <thead><tr><th>Equipe</th><th>NFTs em mãos</th><th>Resultado</th></tr></thead>
+                <tbody>
+                <?php foreach ($teams as $team): ?>
+                    <?php
+                    $nftsInHand = (int)($team['nft_balance'] ?? 0);
+                    $resultText = 'Em jogo';
+                    $resultClass = 'status-active';
+                    if (!empty($team['is_eliminated'])) {
+                        $resultText = 'Eliminado';
+                        $resultClass = 'status-eliminated';
+                    } elseif (!empty($team['qualified_for_final'])) {
+                        $resultText = 'Classificado';
+                        $resultClass = 'status-qualified';
+                    } elseif ($semifinalWasEvaluated) {
+                        $resultText = $nftsInHand >= 1 ? 'Classificado' : 'Eliminado';
+                        $resultClass = $nftsInHand >= 1 ? 'status-qualified' : 'status-eliminated';
+                    }
+                    ?>
+                    <tr>
+                        <td><strong><?= $e($team['name'] ?? '-') ?></strong></td>
+                        <td><?= $nftsInHand ?></td>
+                        <td><span class="liquidity-badge <?= $resultClass ?>"><?= $e($resultText) ?></span></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <section class="liquidity-card liquidity-teams-card">
         <div class="liquidity-card-header">
             <p class="liquidity-eyebrow">Participantes</p>
@@ -166,13 +229,14 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                 <thead>
                 <tr>
                     <th>Equipe</th>
-                    <th>Caixa</th>
+                    <th>Caixa R$</th>
                     <th>BTC</th>
-                    <th>NFTs</th>
+                    <th>NFTs em mãos</th>
+                    <th>NFTs na piscina</th>
                     <th>Cotas</th>
-                    <th>Payoff</th>
-                    <th>Status</th>
                     <th>Ação usada?</th>
+                    <th>Status</th>
+                    <th>Payoff</th>
                     <th>Última ação da rodada</th>
                 </tr>
                 </thead>
@@ -180,15 +244,16 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                 <?php foreach ($teams as $team): ?>
                     <?php
                     $score = (float)$team['cash_balance'] + ((float)$team['btc_balance'] * (float)$s['btc_sell_price']) + ((int)$team['nft_balance'] * (float)$s['nft_sell_price']) + ((int)$team['pool_shares'] * (float)$s['share_sell_price']);
-                    $teamStatus = 'ativo';
+                    $teamStatus = 'Em jogo';
                     $teamStatusClass = 'status-active';
                     if (!empty($team['is_eliminated'])) {
-                        $teamStatus = 'eliminado';
+                        $teamStatus = 'Eliminado na semifinal';
                         $teamStatusClass = 'status-eliminated';
                     } elseif (!empty($team['qualified_for_final'])) {
-                        $teamStatus = 'classificado';
+                        $teamStatus = 'Classificado para a final';
                         $teamStatusClass = 'status-qualified';
                     }
+                    $teamPoolNfts = (int)($team['pool_shares'] ?? 0);
                     $teamId = (int)$team['id'];
                     $hasTeamActed = !empty($actedByTeam[$teamId]);
                     $lastAction = $lastActionByTeam[$teamId] ?? null;
@@ -199,10 +264,11 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                         <td><?= $money($team['cash_balance']) ?></td>
                         <td><?= number_format((float)$team['btc_balance'], 2, ',', '.') ?></td>
                         <td><?= (int)$team['nft_balance'] ?></td>
+                        <td><?= $teamPoolNfts ?></td>
                         <td><?= (int)$team['pool_shares'] ?></td>
-                        <td><strong><?= $money($score) ?></strong></td>
-                        <td><span class="liquidity-badge <?= $teamStatusClass ?>"><?= $e($teamStatus) ?></span></td>
                         <td><span class="liquidity-badge <?= $hasTeamActed ? 'status-qualified' : 'status-pending' ?>"><?= $hasTeamActed ? 'Sim' : 'Não' ?></span></td>
+                        <td><span class="liquidity-badge <?= $teamStatusClass ?>"><?= $e($teamStatus) ?></span></td>
+                        <td><strong><?= $money($score) ?></strong></td>
                         <td><?= $e($lastActionLabel) ?></td>
                     </tr>
                 <?php endforeach; ?>
@@ -226,8 +292,9 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                         <option value="">Selecione a equipe</option>
                         <?php foreach ($teams as $team): ?>
                             <?php $teamId = (int)$team['id']; ?>
-                            <option value="<?= $teamId ?>" <?= !empty($actedByTeam[$teamId]) ? 'disabled' : '' ?>>
-                                <?= $e($team['name'] ?? '-') ?><?= !empty($actedByTeam[$teamId]) ? ' — ação já usada' : '' ?>
+                            <?php $teamCannotAct = !empty($actedByTeam[$teamId]) || !empty($team['is_eliminated']); ?>
+                            <option value="<?= $teamId ?>" <?= $teamCannotAct ? 'disabled' : '' ?>>
+                                <?= $e($team['name'] ?? '-') ?><?= !empty($team['is_eliminated']) ? ' — eliminado na semifinal' : (!empty($actedByTeam[$teamId]) ? ' — ação já usada' : '') ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -255,7 +322,7 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                     <select name="target_team_id">
                         <option value="">Selecione a contraparte</option>
                         <?php foreach ($teams as $team): ?>
-                            <option value="<?= (int)$team['id'] ?>"><?= $e($team['name'] ?? '-') ?></option>
+                            <option value="<?= (int)$team['id'] ?>" <?= !empty($team['is_eliminated']) ? 'disabled' : '' ?>><?= $e($team['name'] ?? '-') ?><?= !empty($team['is_eliminated']) ? ' — eliminado' : '' ?></option>
                         <?php endforeach; ?>
                     </select>
                 </label>
