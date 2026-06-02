@@ -6,8 +6,11 @@ use App\Core\Controller;
 use App\Core\Session;
 use App\Core\Csrf;
 use App\Repositories\LiquidityActionRepository;
-use App\Repositories\LiquidityTeamRepository;
+use App\Repositories\LiquidityEventRepository;
+use App\Repositories\LiquidityPoolRepository;
 use App\Repositories\LiquidityRoundRepository;
+use App\Repositories\LiquiditySessionRepository;
+use App\Repositories\LiquidityTeamRepository;
 use App\Services\LiquidityPoolService;
 use App\Services\LiquidityPredictionMarketService;
 use DomainException;
@@ -172,20 +175,44 @@ final class LiquidityAdminController extends Controller
         $sid = (int) $id;
 
         try {
-            $state = $this->liquidityService()->getProjectorState($sid);
-            $session = $state['session'];
-            $round = (int) ($session['current_round'] ?? 1);
-            $teams = (new LiquidityTeamRepository())->getBySessionId($sid);
+            $sessionRepo = new LiquiditySessionRepository();
+            $session = $sessionRepo->findById($sid);
+
+            if (!$session) {
+                http_response_code(404);
+                $this->view('liquidity.admin.projector', [
+                    'pageTitle' => 'Projetor — Piscina de Liquidez',
+                    'projectorError' => 'Piscina não encontrada.',
+                ], 'layouts.projector');
+                return;
+            }
+
+            $round = max(1, (int) ($session['current_round'] ?? 1));
+            $teams = (new LiquidityTeamRepository())->getBySessionId($sid) ?: [];
+            $pool = (new LiquidityPoolRepository())->findBySessionId($sid) ?: [];
+            $feed = (new LiquidityEventRepository())->getRecentBySession($sid, 20) ?: [];
             $currentRoundState = (new LiquidityRoundRepository())->getCurrentRound($sid, $round);
-            $actionRepo = new LiquidityActionRepository();
             $actedByTeam = [];
             $lastActionByTeam = [];
+            $actionRepo = new LiquidityActionRepository();
 
             foreach ($teams as $team) {
-                $teamId = (int) $team['id'];
+                $teamId = (int) ($team['id'] ?? 0);
+                if ($teamId <= 0) {
+                    continue;
+                }
+
                 $actedByTeam[$teamId] = $actionRepo->hasTeamActed($sid, $round, $teamId);
                 $lastActionByTeam[$teamId] = $actionRepo->getLastActionForTeam($sid, $round, $teamId);
             }
+
+            $state = [
+                'session' => $session,
+                'pool' => $pool,
+                'ranking' => $this->buildProjectorRanking($teams, $session),
+                'final_ranking' => $this->buildProjectorFinalRanking($teams, $session),
+                'feed' => $feed,
+            ];
 
             $this->view('liquidity.admin.projector', [
                 'pageTitle' => 'Projetor — Piscina de Liquidez',
@@ -195,19 +222,101 @@ final class LiquidityAdminController extends Controller
                 'lastActionByTeam' => $lastActionByTeam,
                 'currentRoundState' => $currentRoundState,
             ], 'layouts.projector');
-        } catch (DomainException $e) {
-            http_response_code(404);
-            $this->view('liquidity.admin.projector', [
-                'pageTitle' => 'Projetor — Piscina de Liquidez',
-                'projectorError' => 'Piscina não encontrada.',
-            ], 'layouts.projector');
         } catch (\Throwable $e) {
-            error_log('Erro ao carregar projetor da piscina ' . $sid . ': ' . $e->getMessage());
+            error_log(sprintf(
+                'Erro ao carregar projetor da piscina %d em %s:%d: %s',
+                $sid,
+                $e->getFile(),
+                $e->getLine(),
+                $e->getMessage()
+            ));
             http_response_code(500);
             $this->view('liquidity.admin.projector', [
                 'pageTitle' => 'Projetor — Piscina de Liquidez',
                 'projectorError' => 'Não foi possível carregar os dados da piscina agora.',
             ], 'layouts.projector');
         }
+    }
+
+    private function buildProjectorRanking(array $teams, array $session): array
+    {
+        foreach ($teams as &$team) {
+            $team['estimated_wealth'] = (float) ($team['cash_balance'] ?? 0)
+                + ((float) ($team['btc_balance'] ?? 0) * (float) ($session['btc_sell_price'] ?? 100))
+                + ((int) ($team['nft_balance'] ?? 0) * (float) ($session['nft_sell_price'] ?? 1800))
+                + ((int) ($team['pool_shares'] ?? 0) * (float) ($session['share_sell_price'] ?? 500));
+            $team['score'] = $team['estimated_wealth'];
+            $team['final_cash_score'] = (float) ($team['cash_balance'] ?? 0);
+            $team['display_status'] = $this->projectorStatusForTeam($team);
+        }
+        unset($team);
+
+        usort($teams, static fn(array $a, array $b): int =>
+            ((float) ($b['estimated_wealth'] ?? 0) <=> (float) ($a['estimated_wealth'] ?? 0))
+            ?: ((float) ($b['cash_balance'] ?? 0) <=> (float) ($a['cash_balance'] ?? 0))
+            ?: ((string) ($a['name'] ?? '') <=> (string) ($b['name'] ?? ''))
+        );
+
+        foreach ($teams as $index => &$team) {
+            $team['general_position'] = $index + 1;
+        }
+        unset($team);
+
+        return $teams;
+    }
+
+    private function buildProjectorFinalRanking(array $teams, array $session): array
+    {
+        $phase = (string) ($session['session_phase'] ?? 'regular');
+        $finalClosed = in_array($phase, ['final_closed', 'closed'], true) || (string) ($session['status'] ?? '') === 'closed';
+        $finalists = array_values(array_filter($teams, static fn(array $team): bool =>
+            !empty($team['qualified_for_final']) && empty($team['is_eliminated'])
+        ));
+
+        usort($finalists, static fn(array $a, array $b): int =>
+            ((float) ($b['cash_balance'] ?? 0) <=> (float) ($a['cash_balance'] ?? 0))
+            ?: ((string) ($a['name'] ?? '') <=> (string) ($b['name'] ?? ''))
+        );
+
+        $topCash = $finalists ? (float) ($finalists[0]['cash_balance'] ?? 0) : null;
+        $topTieCount = $topCash === null ? 0 : count(array_filter($finalists, static fn(array $team): bool =>
+            abs((float) ($team['cash_balance'] ?? 0) - $topCash) < 0.00001
+        ));
+        $previousCash = null;
+        $position = 0;
+
+        foreach ($finalists as $index => &$team) {
+            $cash = (float) ($team['cash_balance'] ?? 0);
+            if ($previousCash === null || abs($cash - $previousCash) > 0.00001) {
+                $position = $index + 1;
+                $previousCash = $cash;
+            }
+
+            $team['final_position'] = $position;
+            $team['final_cash_score'] = $cash;
+            $team['display_status'] = $finalClosed
+                ? ($position === 1 ? ($topTieCount > 1 ? 'Vencedor empatado' : 'Vencedor') : 'Finalista')
+                : 'Classificado para a final';
+        }
+        unset($team);
+
+        return $finalists;
+    }
+
+    private function projectorStatusForTeam(array $team): string
+    {
+        if (!empty($team['final_status'])) {
+            return (string) $team['final_status'];
+        }
+
+        if (!empty($team['is_eliminated'])) {
+            return 'Eliminado na semifinal';
+        }
+
+        if (!empty($team['qualified_for_final'])) {
+            return 'Classificado para a final';
+        }
+
+        return 'Em jogo';
     }
 }
