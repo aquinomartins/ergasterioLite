@@ -1,19 +1,467 @@
-body{background:#f8fafc;color:#0f172a}
-.liquidity-dashboard{display:grid;gap:16px}
-.liquidity-header,.vitality-card,.payoff-card,.pool-state-card,.feed-card,.ranking-card,.action-card{background:#ffffff;border:1px solid #dbe4ef;border-radius:12px;padding:14px;box-shadow:0 10px 24px rgba(15,23,42,.05)}
-.liquidity-vitals{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
-.vitality-card h3{margin:0 0 8px;color:#0c4a6e}
-.vitality-card p{font-size:1.4rem;margin:0;color:#0f172a}
-.payoff-card{border-color:#16a34a;box-shadow:0 0 0 1px rgba(22,163,74,.25) inset,0 10px 24px rgba(15,23,42,.05)}
-.payoff-card p{font-size:2rem;color:#15803d;margin:0}
-.pool-state-card{border-left:5px solid #2563eb}
-.pool-status-empty{border-left-color:#64748b}.pool-status-tense{border-left-color:#d97706}.pool-status-stable{border-left-color:#16a34a}.pool-status-critical{border-left-color:#ea580c}.pool-status-collapsed{border-left-color:#dc2626}
-.action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
-.action-card button{margin-top:10px;width:100%;background:#0ea5e9;color:#ffffff;border:0;padding:10px;border-radius:8px;font-weight:700}
-.action-effect{font-size:.92rem;color:#475569;padding-left:16px}
-.action-disabled{opacity:.6}
-.warning-text{color:#92400e;background:#fff7ed;border:1px solid #fed7aa;padding:10px;border-radius:8px}
-.vitality-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.current-team-row{background:#ecfeff}
-table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #dbe4ef;text-align:left}
-@media (max-width:900px){.vitality-grid{grid-template-columns:1fr}}
+body {
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.liquidity-dashboard {
+    display: grid;
+    gap: 16px;
+}
+
+.liquidity-card,
+.liquidity-header,
+.vitality-card,
+.payoff-card,
+.pool-state-card,
+.feed-card,
+.ranking-card,
+.action-card {
+    background: #ffffff;
+    border: 1px solid #dbe4ef;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, .05);
+}
+
+.liquidity-admin-page {
+    gap: 18px;
+}
+
+.liquidity-hero-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, .9fr);
+    gap: 18px;
+    align-items: start;
+    border-top: 5px solid #0ea5e9;
+    padding: 20px;
+}
+
+.liquidity-hero-card h1,
+.liquidity-card h2 {
+    margin: 0;
+    color: #0f172a;
+}
+
+.liquidity-hero-card h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.05;
+}
+
+.liquidity-card p {
+    color: #475569;
+}
+
+.liquidity-eyebrow {
+    margin: 0 0 6px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 800;
+    font-size: .75rem;
+    color: #0369a1;
+}
+
+.liquidity-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.liquidity-meta-grid span,
+.liquidity-action-summary span {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 7px 11px;
+    color: #334155;
+}
+
+.liquidity-params-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.liquidity-params-grid div,
+.liquidity-stat {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.liquidity-params-grid span,
+.liquidity-stat span {
+    display: block;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.liquidity-params-grid strong,
+.liquidity-stat strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 1.1rem;
+    color: #0f172a;
+}
+
+.liquidity-card-header {
+    margin-bottom: 12px;
+}
+
+.liquidity-card-header h2 {
+    font-size: 1.35rem;
+}
+
+.liquidity-rules-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 18px;
+    margin: 0;
+    padding-left: 20px;
+    color: #334155;
+}
+
+.liquidity-rules-list li {
+    line-height: 1.45;
+}
+
+.liquidity-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+}
+
+.liquidity-stat-success {
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+
+.liquidity-stat-warning {
+    border-color: #fed7aa;
+    background: #fff7ed;
+}
+
+.liquidity-inline-control {
+    margin-top: 14px;
+}
+
+.liquidity-inline-control button {
+    max-width: 260px;
+}
+
+.liquidity-pool-stats .liquidity-stat strong {
+    font-size: 1.25rem;
+}
+
+.liquidity-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+}
+
+.liquidity-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 840px;
+    background: #fff;
+}
+
+.liquidity-table th {
+    background: #f8fafc;
+    color: #334155;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.liquidity-table td,
+.liquidity-table th {
+    padding: 12px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.liquidity-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.liquidity-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.liquidity-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: .78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.status-active {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.status-qualified {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-eliminated {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.liquidity-action-info-card p {
+    margin-top: 0;
+}
+
+.liquidity-action-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.liquidity-feed-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.liquidity-feed-list li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.liquidity-feed-list p {
+    margin: 4px 0 0;
+    color: #475569;
+}
+
+.liquidity-event-round,
+.liquidity-rank-position {
+    display: inline-grid;
+    place-items: center;
+    min-width: 38px;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-weight: 800;
+}
+
+.liquidity-event-round {
+    height: 38px;
+}
+
+.liquidity-ranking-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.liquidity-ranking-list li {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 11px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.liquidity-rank-position {
+    min-width: 42px;
+    height: 32px;
+}
+
+.liquidity-control-grid .action-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 88px;
+    text-decoration: none;
+    color: #0f172a;
+}
+
+.liquidity-control-grid .action-card h3 {
+    margin: 0;
+}
+
+.liquidity-vitals {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.vitality-card h3 {
+    margin: 0 0 8px;
+    color: #0c4a6e;
+}
+
+.vitality-card p {
+    font-size: 1.4rem;
+    margin: 0;
+    color: #0f172a;
+}
+
+.payoff-card {
+    border-color: #16a34a;
+    box-shadow: 0 0 0 1px rgba(22, 163, 74, .25) inset, 0 10px 24px rgba(15, 23, 42, .05);
+}
+
+.payoff-card p {
+    font-size: 2rem;
+    color: #15803d;
+    margin: 0;
+}
+
+.pool-state-card {
+    border-left: 5px solid #2563eb;
+}
+
+.pool-status-empty {
+    border-left-color: #64748b;
+}
+
+.pool-status-tense {
+    border-left-color: #d97706;
+}
+
+.pool-status-stable {
+    border-left-color: #16a34a;
+}
+
+.pool-status-critical {
+    border-left-color: #ea580c;
+}
+
+.pool-status-collapsed {
+    border-left-color: #dc2626;
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+}
+
+.action-card button {
+    margin-top: 10px;
+    width: 100%;
+    background: #0ea5e9;
+    color: #ffffff;
+    border: 0;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.action-card button:hover {
+    background: #0284c7;
+}
+
+.action-effect {
+    font-size: .92rem;
+    color: #475569;
+    padding-left: 16px;
+}
+
+.action-disabled {
+    opacity: .6;
+}
+
+.warning-text {
+    color: #92400e;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.vitality-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.current-team-row {
+    background: #ecfeff;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+td,
+th {
+    padding: 8px;
+    border-bottom: 1px solid #dbe4ef;
+    text-align: left;
+}
+
+@media (max-width: 900px) {
+    .liquidity-hero-card {
+        grid-template-columns: 1fr;
+    }
+
+    .liquidity-rules-list {
+        grid-template-columns: 1fr;
+    }
+
+    .vitality-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .liquidity-params-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .liquidity-meta-grid span,
+    .liquidity-action-summary span {
+        width: 100%;
+        border-radius: 12px;
+    }
+
+    .liquidity-ranking-list li {
+        grid-template-columns: auto 1fr;
+    }
+
+    .liquidity-ranking-list li span:last-child {
+        grid-column: 2;
+    }
+
+    .liquidity-inline-control button {
+        max-width: none;
+    }
+}
