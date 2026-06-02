@@ -82,7 +82,7 @@ $actionMeta = [
 
     <section class="vitality-grid">
         <article class="feed-card"><h2>Feed vivo</h2><ul><?php if (!$events): ?><li>Nenhum evento registrado ainda.</li><?php endif; ?><?php foreach ($events as $event): ?><li>[R<?= (int)($event['round_number'] ?? 0) ?>] <?= $e($event['event_type'] ?? '') ?> — <?= $e($event['description'] ?? '') ?> (<?= $e($event['created_at'] ?? '') ?>)</li><?php endforeach; ?></ul></article>
-        <article class="ranking-card"><h2>Ranking parcial</h2><table><thead><tr><th>#</th><th>Equipe</th><th>Score</th></tr></thead><tbody><?php foreach ($ranking as $i => $row): ?><tr class="<?= (int)($row['id'] ?? 0) === $teamId ? 'current-team-row' : '' ?>"><td><?= $i + 1 ?></td><td><?= $e($row['name'] ?? '-') ?></td><td><?= $money($row['score'] ?? 0) ?></td></tr><?php endforeach; ?></tbody></table></article>
+        <article class="ranking-card"><h2>Ranking geral</h2><p>Ranking informativo por patrimônio estimado. Não define o vencedor da final.</p><table><thead><tr><th>#</th><th>Equipe</th><th>Caixa R$</th><th>Patrimônio estimado</th><th>Status</th></tr></thead><tbody><?php foreach ($ranking as $row): ?><tr class="<?= (int)($row['id'] ?? 0) === $teamId ? 'current-team-row' : '' ?>"><td><?= (int)($row['general_position'] ?? 0) ?></td><td><?= $e($row['name'] ?? '-') ?></td><td><?= $money($row['cash_balance'] ?? 0) ?></td><td><?= $money($row['estimated_wealth'] ?? $row['score'] ?? 0) ?></td><td><?= $e($row['display_status'] ?? 'Em jogo') ?></td></tr><?php endforeach; ?></tbody></table></article>
     </section>
 </div>
 <script src="/assets/js/liquidity-team.js"></script>

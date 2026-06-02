@@ -186,6 +186,52 @@ $roundStatus = ($finalWasClosed || ($currentRoundState['status'] ?? '') === 'clo
         </div>
     </section>
 
+    <section class="liquidity-card ranking-card">
+        <div class="liquidity-card-header">
+            <p class="liquidity-eyebrow">Acompanhamento</p>
+            <h2>Ranking geral</h2>
+        </div>
+        <p>Ranking informativo por patrimônio estimado. Não define o vencedor da final.</p>
+        <div class="liquidity-table-wrap">
+            <table class="liquidity-table">
+                <thead>
+                <tr>
+                    <th>Posição</th>
+                    <th>Equipe</th>
+                    <th>Caixa R$</th>
+                    <th>BTC</th>
+                    <th>NFTs em mãos</th>
+                    <th>Cotas</th>
+                    <th>Patrimônio estimado</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php if (!$ranking): ?>
+                    <tr><td colspan="8">Nenhuma equipe cadastrada ainda.</td></tr>
+                <?php endif; ?>
+                <?php foreach ($ranking as $row): ?>
+                    <?php
+                    $generalStatus = (string)($row['display_status'] ?? 'Em jogo');
+                    $generalStatusClass = in_array($generalStatus, ['Vencedor', 'Vencedor empatado', 'Classificado para a final', 'Finalista'], true)
+                        ? 'status-qualified'
+                        : ($generalStatus === 'Eliminado na semifinal' ? 'status-eliminated' : 'status-active');
+                    ?>
+                    <tr>
+                        <td><strong><?= (int)($row['general_position'] ?? 0) ?>º</strong></td>
+                        <td><?= $e($row['name'] ?? '-') ?></td>
+                        <td><?= $money($row['cash_balance'] ?? 0) ?></td>
+                        <td><?= number_format((float)($row['btc_balance'] ?? 0), 2, ',', '.') ?></td>
+                        <td><?= (int)($row['nft_balance'] ?? 0) ?></td>
+                        <td><?= (int)($row['pool_shares'] ?? 0) ?></td>
+                        <td><?= $money($row['estimated_wealth'] ?? $row['score'] ?? 0) ?></td>
+                        <td><span class="liquidity-badge <?= $generalStatusClass ?>"><?= $e($generalStatus) ?></span></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
 
     <section class="liquidity-card liquidity-semifinal-card">
         <div class="liquidity-card-header">
@@ -245,7 +291,7 @@ $roundStatus = ($finalWasClosed || ($currentRoundState['status'] ?? '') === 'clo
             <article class="liquidity-stat <?= $finalWinners ? 'liquidity-stat-success' : '' ?>"><span>Vencedor</span><strong><?= $finalWinnerText !== '' ? $e($finalWinnerText) : '—' ?></strong></article>
         </div>
         <?php if (!$semifinalWasEvaluated): ?>
-            <p class="warning-text">A semifinal precisa ser avaliada antes da final.</p>
+            <p class="warning-text">A semifinal ainda não foi avaliada. O ranking da final será exibido após a definição dos finalistas.</p>
         <?php endif; ?>
         <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/close-final" class="liquidity-inline-control action-card">
             <?= \App\Core\Csrf::input() ?>
@@ -253,12 +299,17 @@ $roundStatus = ($finalWasClosed || ($currentRoundState['status'] ?? '') === 'clo
             <?php if ($finalWasClosed): ?><small>A final já foi encerrada.</small><?php endif; ?>
         </form>
         <h3>Ranking da final</h3>
-        <p>Na final, vence quem tiver mais dinheiro em reais.</p>
+        <p>Na final, vence o time classificado que tiver mais dinheiro em reais.</p>
+        <?php if ($semifinalWasEvaluated): ?>
+            <p><strong><?= $finalWasClosed ? 'Resultado final.' : 'Ranking parcial da final por caixa em reais.' ?></strong></p>
+        <?php endif; ?>
         <div class="liquidity-table-wrap">
             <table class="liquidity-table">
                 <thead><tr><th>Posição</th><th>Equipe</th><th>Caixa R$</th><th>Status</th></tr></thead>
                 <tbody>
-                <?php if (!$finalRanking): ?>
+                <?php if (!$semifinalWasEvaluated): ?>
+                    <tr><td colspan="4">A semifinal ainda não foi avaliada. O ranking da final será exibido após a definição dos finalistas.</td></tr>
+                <?php elseif (!$finalRanking): ?>
                     <tr><td colspan="4">Nenhum finalista definido ainda.</td></tr>
                 <?php endif; ?>
                 <?php foreach ($finalRanking as $row): ?>
@@ -424,22 +475,6 @@ $roundStatus = ($finalWasClosed || ($currentRoundState['status'] ?? '') === 'clo
                 </li>
             <?php endforeach; ?>
         </ul>
-    </section>
-
-    <section class="liquidity-card ranking-card">
-        <div class="liquidity-card-header">
-            <p class="liquidity-eyebrow">Pontuação parcial</p>
-            <h2>Ranking</h2>
-        </div>
-        <ol class="liquidity-ranking-list">
-            <?php foreach($ranking as $index => $r): ?>
-                <li>
-                    <span class="liquidity-rank-position">#<?= $index + 1 ?></span>
-                    <strong><?= $e($r['name'] ?? '-') ?></strong>
-                    <span><?= $money($r['score'] ?? 0) ?></span>
-                </li>
-            <?php endforeach; ?>
-        </ol>
     </section>
 
     <section class="liquidity-card liquidity-controls-card">
