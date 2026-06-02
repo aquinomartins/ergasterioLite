@@ -17,30 +17,50 @@ final class LiquidityPoolService {
     private function mustSession(int $id):array{$s=$this->sessions->findById($id);if(!$s)throw new DomainException('Sessão não encontrada.');return $s;}
 
     public function submitTeamAction($sid,$tid,$a,$q=1,$extra=[]):void{
-        $sid=(int)$sid;$tid=(int)$tid;$q=(float)$q;if(!in_array($a,self::ACTIONS,true))throw new DomainException('Ação inválida.');
-        $s=$this->mustSession($sid); if(($s['status']??'')!=='active') throw new DomainException('Sessão não está ativa.');
-        $t=$this->teams->findById($tid); $p=$this->pool->findBySessionId($sid); if(!$t||!$p||(int)$t['session_id']!==$sid) throw new DomainException('Equipe inválida.');
-        if((int)($t['is_eliminated']??0)===1) throw new DomainException('Equipe eliminada não pode agir.');
-        $phase=(string)($s['session_phase']??'regular'); if(!in_array($phase,['regular','semifinal','final'],true)) throw new DomainException('Fase encerrada.');
-        $r=(int)$s['current_round']; if($this->actions->hasTeamActed($sid,$r,$tid)) throw new DomainException('Este time já enviou sua decisão nesta rodada.');
-        $result=['cash'=>0.0,'btc'=>0.0,'nft'=>0,'share'=>0,'poolN'=>(int)$p['pool_nfts'],'tot'=>(int)$p['total_shares'],'msg'=>'Você passou a vez.'];
-        if($a==='deposit_nft')$result=$this->depositNft($t,$s,$p);
-        elseif($a==='withdraw_nft_btc')$result=$this->withdrawNftWithBtc($t,$s,$p);
-        elseif($a==='withdraw_nft_cash')$result=$this->withdrawNftWithCash($t,$s,$p);
-        elseif($a==='buy_btc')$result=$this->buyBtc($t,$s,$q,$p);
-        elseif($a==='sell_btc')$result=$this->sellBtc($t,$s,$q,$p);
-        elseif($a==='sell_nft')$result=$this->sellNft($t,$s,$p);
-        elseif($a==='sell_share')$result=$this->sellShare($t,$s,$p);
-        elseif($a==='trade_nft_between_teams')$result=$this->tradeNftBetweenTeams($sid,$tid,$t,$extra,$r,$p);
-        else $result=$this->passTurn($t,$p);
+        $sid=(int)$sid;
+        $tid=(int)$tid;
+        $q=(float)$q;
 
-        $this->pdo->beginTransaction(); try {
+        if(!in_array($a,self::ACTIONS,true))throw new DomainException('Ação inválida.');
+
+        $s=$this->mustSession($sid);
+        if(($s['status']??'')!=='active') throw new DomainException('Sessão não está ativa.');
+
+        $t=$this->teams->findById($tid);
+        $p=$this->pool->findBySessionId($sid);
+        if(!$t||!$p||(int)$t['session_id']!==$sid) throw new DomainException('Equipe inválida.');
+        if((int)($t['is_eliminated']??0)===1) throw new DomainException('Equipe eliminada não pode agir.');
+
+        $phase=(string)($s['session_phase']??'regular');
+        if(!in_array($phase,['regular','semifinal','final'],true)) throw new DomainException('Fase encerrada.');
+
+        $r=(int)$s['current_round'];
+        if(!$this->rounds->hasOpenRound($sid,$r)) throw new DomainException('Rodada encerrada. Aguarde o professor iniciar a próxima rodada.');
+        if($this->actions->hasTeamActed($sid,$r,$tid)) throw new DomainException('Este time já usou sua ação nesta rodada.');
+
+        $this->pdo->beginTransaction();
+        try {
+            $result=['cash'=>0.0,'btc'=>0.0,'nft'=>0,'share'=>0,'poolN'=>(int)$p['pool_nfts'],'tot'=>(int)$p['total_shares'],'msg'=>'Você passou a vez.'];
+            if($a==='deposit_nft')$result=$this->depositNft($t,$s,$p);
+            elseif($a==='withdraw_nft_btc')$result=$this->withdrawNftWithBtc($t,$s,$p);
+            elseif($a==='withdraw_nft_cash')$result=$this->withdrawNftWithCash($t,$s,$p);
+            elseif($a==='buy_btc')$result=$this->buyBtc($t,$s,$q,$p);
+            elseif($a==='sell_btc')$result=$this->sellBtc($t,$s,$q,$p);
+            elseif($a==='sell_nft')$result=$this->sellNft($t,$s,$p);
+            elseif($a==='sell_share')$result=$this->sellShare($t,$s,$p);
+            elseif($a==='trade_nft_between_teams')$result=$this->tradeNftBetweenTeams($sid,$tid,$t,$extra,$r,$p);
+            else $result=$this->passTurn($t,$p);
+
             $this->teams->updateBalances($tid,(float)$t['cash_balance']+$result['cash'],(float)$t['btc_balance']+$result['btc'],(int)$t['nft_balance']+$result['nft'],(int)$t['pool_shares']+$result['share']);
             $this->pool->updateState($sid,$result['poolN'],$result['tot'],(float)$p['total_value'],(float)$p['yield_per_share'],$this->determinePoolStatus($result['poolN'],$result['tot']));
             $this->actions->create($sid,$r,$tid,$a,$q,$extra['target_team_id']??null,$extra['price']??null);
             $this->events->create($sid,$r,$tid,$a,$result['msg'],$result['cash'],$result['btc'],$result['nft'],$result['share']);
-            $this->updatePoolTotals($sid); $this->pdo->commit();
-        } catch(\Throwable $e){ if($this->pdo->inTransaction())$this->pdo->rollBack(); throw $e; }
+            $this->updatePoolTotals($sid);
+            $this->pdo->commit();
+        } catch(\Throwable $e){
+            if($this->pdo->inTransaction())$this->pdo->rollBack();
+            throw $e;
+        }
     }
     public function depositNft($t,$s,$p):array{if((int)$t['nft_balance']<1)throw new DomainException('Sua equipe não possui NFT em mãos para depositar.');return ['cash'=>0,'btc'=>(float)$s['btc_deposit_reward'],'nft'=>-1,'share'=>1,'poolN'=>(int)$p['pool_nfts']+1,'tot'=>(int)$p['total_shares']+1,'msg'=>'Equipe '.$t['name'].' depositou 1 NFT na piscina, recebeu '.rtrim(rtrim(number_format((float)$s['btc_deposit_reward'],2,'.',''),'0'),'.').' BTC e ganhou 1 cota.'];}
     public function withdrawNftWithBtc($t,$s,$p):array{if((float)$t['btc_balance']<(float)$s['btc_withdraw_cost'])throw new DomainException('BTC insuficiente para retirar NFT.');if((int)$p['pool_nfts']<1)throw new DomainException('A piscina não possui NFT disponível para retirada.');return ['cash'=>0,'btc'=>-(float)$s['btc_withdraw_cost'],'nft'=>1,'share'=>0,'poolN'=>(int)$p['pool_nfts']-1,'tot'=>(int)$p['total_shares'],'msg'=>'Equipe '.$t['name'].' retirou 1 NFT da piscina pagando '.rtrim(rtrim(number_format((float)$s['btc_withdraw_cost'],2,'.',''),'0'),'.').' BTC.'];}
@@ -52,7 +72,42 @@ final class LiquidityPoolService {
     public function passTurn($t,$p):array{return ['cash'=>0,'btc'=>0,'nft'=>0,'share'=>0,'poolN'=>(int)$p['pool_nfts'],'tot'=>(int)$p['total_shares'],'msg'=>'Equipe '.$t['name'].' passou a vez.'];}
     public function tradeNftBetweenTeams($sid,$tid,$buyer,$extra,$round,$p):array{ $target=(int)($extra['target_team_id']??0); $price=(float)($extra['price']??0); if($target<=0||$target===$tid)throw new DomainException('Equipe alvo inválida para compra.'); if($price<=0)throw new DomainException('O preço deve ser maior que zero.'); $seller=$this->teams->findById($target); if(!$seller||(int)$seller['session_id']!==$sid)throw new DomainException('Equipe alvo inválida.'); if((float)$buyer['cash_balance']<$price)throw new DomainException('Caixa insuficiente para comprar NFT de outra equipe.'); if((int)$seller['nft_balance']<1)throw new DomainException('Equipe vendedora sem NFT disponível.'); $this->teams->updateBalances($target,(float)$seller['cash_balance']+$price,(float)$seller['btc_balance'],(int)$seller['nft_balance']-1,(int)$seller['pool_shares']); return ['cash'=>-$price,'btc'=>0,'nft'=>1,'share'=>0,'poolN'=>(int)$p['pool_nfts'],'tot'=>(int)$p['total_shares'],'msg'=>'Equipe '.$buyer['name'].' comprou 1 NFT da Equipe '.$seller['name'].' por R$ '.number_format($price,2,',','.').'.']; }
 
-    public function advanceRound($sid):array{ $s=$this->mustSession((int)$sid); if(($s['status']??'')==='closed')throw new DomainException('Sessão encerrada.'); $round=(int)$s['current_round']; $this->pdo->beginTransaction(); try{ $this->rounds->closeRound((int)$sid,$round); $teams=$this->teams->getBySessionId((int)$sid); $pool=$this->pool->findBySessionId((int)$sid); $totalValue=(int)$pool['pool_nfts']*(float)$s['nft_pool_value']; $yieldTotal=$totalValue*(float)$s['pool_yield_rate']; $yieldPer=((int)$pool['total_shares']>0)?$yieldTotal/(int)$pool['total_shares']:0.0; foreach($teams as $t){$this->teams->updateBalances((int)$t['id'],(float)$t['cash_balance']-(float)$s['round_fee']+((int)$t['pool_shares']*$yieldPer),(float)$t['btc_balance'],(int)$t['nft_balance'],(int)$t['pool_shares']);} $this->pool->updateState((int)$sid,(int)$pool['pool_nfts'],(int)$pool['total_shares'],$totalValue,$yieldPer,$this->determinePoolStatus((int)$pool['pool_nfts'],(int)$pool['total_shares'])); $this->events->create((int)$sid,$round,null,'round_closed','Rodada '.$round.' encerrada. Cada time pagou R$ '.number_format((float)$s['round_fee'],2,',','.').'. A piscina distribuiu R$ '.number_format($yieldPer,2,',','.').' por cota.',0,0,0,0); if($round<(int)$s['total_rounds']){$this->sessions->incrementRound((int)$sid);$this->rounds->createRound((int)$sid,$round+1);} $this->pdo->commit(); return ['message'=>'Rodada avançada.']; }catch(\Throwable $e){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $e;}}
+    public function advanceRound($sid):array{
+        $sid=(int)$sid;
+        $s=$this->mustSession($sid);
+        if(($s['status']??'')==='closed')throw new DomainException('Sessão encerrada.');
+
+        $round=(int)$s['current_round'];
+        $this->pdo->beginTransaction();
+        try{
+            $this->rounds->closeRound($sid,$round);
+            $teams=$this->teams->getBySessionId($sid);
+            $pool=$this->pool->findBySessionId($sid);
+            $totalValue=(int)$pool['pool_nfts']*(float)$s['nft_pool_value'];
+            $yieldTotal=$totalValue*(float)$s['pool_yield_rate'];
+            $yieldPer=((int)$pool['total_shares']>0)?$yieldTotal/(int)$pool['total_shares']:0.0;
+
+            foreach($teams as $t){
+                $this->teams->updateBalances((int)$t['id'],(float)$t['cash_balance']-(float)$s['round_fee']+((int)$t['pool_shares']*$yieldPer),(float)$t['btc_balance'],(int)$t['nft_balance'],(int)$t['pool_shares']);
+            }
+
+            $this->pool->updateState($sid,(int)$pool['pool_nfts'],(int)$pool['total_shares'],$totalValue,$yieldPer,$this->determinePoolStatus((int)$pool['pool_nfts'],(int)$pool['total_shares']));
+            $this->events->create($sid,$round,null,'round_closed','Rodada '.$round.' encerrada. Cada time pagou R$ '.number_format((float)$s['round_fee'],2,',','.').'. A piscina distribuiu R$ '.number_format($yieldPer,2,',','.').' por cota.',0,0,0,0);
+
+            if($round<(int)$s['total_rounds']){
+                $nextRound=$round+1;
+                $this->sessions->incrementRound($sid);
+                $this->rounds->createRound($sid,$nextRound);
+                $this->events->create($sid,$nextRound,null,'round_started','Rodada '.$nextRound.' iniciada. Todos os times podem agir novamente.',0,0,0,0);
+            }
+
+            $this->pdo->commit();
+            return ['message'=>'Rodada avançada.'];
+        }catch(\Throwable $e){
+            if($this->pdo->inTransaction())$this->pdo->rollBack();
+            throw $e;
+        }
+    }
     public function evaluateSemifinal($sid):void{$s=$this->mustSession((int)$sid);$teams=$this->teams->getBySessionId((int)$sid);foreach($teams as $t){$ok=(int)$t['nft_balance']>=1; $this->pdo->prepare('UPDATE liquidity_teams SET is_eliminated=?, qualified_for_final=?, updated_at=NOW() WHERE id=?')->execute([$ok?0:1,$ok?1:0,(int)$t['id']]); $this->events->create((int)$sid,(int)$s['current_round'],(int)$t['id'],'semifinal',$ok?'Equipe '.$t['name'].' passou para a final.':'Equipe '.$t['name'].' foi eliminada na semifinal por não ter NFT em mãos.',0,0,0,0);} $this->pdo->prepare("UPDATE liquidity_sessions SET session_phase='final', updated_at=NOW() WHERE id=?")->execute([(int)$sid]);}
     public function closeFinal($sid):void{$s=$this->mustSession((int)$sid);$teams=$this->teams->getBySessionId((int)$sid);usort($teams,fn($a,$b)=>(float)$b['cash_balance']<=>(float)$a['cash_balance']);$w=$teams[0]??null;foreach($teams as $t){$this->teams->updateFinalScore((int)$t['id'],(float)$t['cash_balance']);} if($w){$this->events->create((int)$sid,(int)$s['current_round'],(int)$w['id'],'final_winner','Equipe '.$w['name'].' venceu a final com R$ '.number_format((float)$w['cash_balance'],2,',','.'),0,0,0,0);} $this->pdo->prepare("UPDATE liquidity_sessions SET session_phase='closed', status='closed', updated_at=NOW() WHERE id=?")->execute([(int)$sid]);}
     public function calculatePartialScore($t,$s):float{return (float)$t['cash_balance']+((float)$t['btc_balance']*(float)$s['btc_sell_price'])+((int)$t['nft_balance']*(float)$s['nft_sell_price'])+((int)$t['pool_shares']*(float)$s['share_sell_price']);}

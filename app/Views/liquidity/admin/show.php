@@ -3,6 +3,19 @@ $s = $state['session'] ?? [];
 $pool = $state['pool'] ?? [];
 $ranking = $state['ranking'] ?? [];
 $feed = $state['feed'] ?? [];
+$lastActionByTeam = $lastActionByTeam ?? [];
+$currentRoundState = $currentRoundState ?? [];
+$actionLabels = [
+    'deposit_nft' => 'Depositou NFT',
+    'withdraw_nft_btc' => 'Retirou NFT com BTC',
+    'withdraw_nft_cash' => 'Retirou NFT com dinheiro',
+    'buy_btc' => 'Comprou BTC',
+    'sell_btc' => 'Vendeu BTC',
+    'sell_nft' => 'Vendeu NFT em mãos',
+    'sell_share' => 'Vendeu cota',
+    'trade_nft_between_teams' => 'Comprou NFT de outro time',
+    'pass' => 'Passou a vez',
+];
 $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 $money = static fn($v): string => 'R$ ' . number_format((float)$v, 2, ',', '.');
 $percent = static fn($v): string => rtrim(rtrim(number_format(((float)$v) * 100, 2, ',', '.'), '0'), ',') . '%';
@@ -14,6 +27,7 @@ foreach ($actedByTeam as $hasActed) {
     }
 }
 $pendingCount = max(0, $totalTeams - $actedCount);
+$roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status'] ?? '') === 'closed') ? 'Encerrada' : (($totalTeams > 0 && $pendingCount === 0) ? 'Todos já agiram' : 'Em andamento');
 ?>
 <div class="liquidity-dashboard liquidity-admin-page">
     <section class="liquidity-card liquidity-hero-card">
@@ -71,9 +85,36 @@ $pendingCount = max(0, $totalTeams - $actedCount);
                 <strong><?= $actedCount ?></strong>
             </article>
             <article class="liquidity-stat liquidity-stat-warning">
-                <span>Times pendentes</span>
+                <span>Times aguardando ação</span>
                 <strong><?= $pendingCount ?></strong>
             </article>
+            <article class="liquidity-stat <?= $pendingCount === 0 && $totalTeams > 0 ? 'liquidity-stat-success' : '' ?>">
+                <span>Status da rodada</span>
+                <strong><?= $e($roundStatus) ?></strong>
+            </article>
+        </div>
+        <?php if ($totalTeams > 0 && $pendingCount === 0): ?>
+            <p class="round-ready-message">Todos os times já agiram. A rodada pode ser encerrada.</p>
+        <?php endif; ?>
+        <div class="liquidity-table-wrap liquidity-round-state-table">
+            <table class="liquidity-table">
+                <thead><tr><th>Equipe</th><th>Ação usada?</th><th>Última ação</th></tr></thead>
+                <tbody>
+                <?php foreach ($teams as $team): ?>
+                    <?php
+                    $teamId = (int)$team['id'];
+                    $hasTeamActed = !empty($actedByTeam[$teamId]);
+                    $lastAction = $lastActionByTeam[$teamId] ?? null;
+                    $lastActionLabel = $lastAction ? ($actionLabels[$lastAction['action_type'] ?? ''] ?? (string)($lastAction['action_type'] ?? '—')) : '—';
+                    ?>
+                    <tr>
+                        <td><strong><?= $e($team['name'] ?? '-') ?></strong></td>
+                        <td><span class="liquidity-badge <?= $hasTeamActed ? 'status-qualified' : 'status-pending' ?>"><?= $hasTeamActed ? 'Sim' : 'Não' ?></span></td>
+                        <td><?= $e($lastActionLabel) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
         <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/advance-round" class="liquidity-inline-control action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Avançar rodada</button></form>
     </section>
@@ -108,6 +149,7 @@ $pendingCount = max(0, $totalTeams - $actedCount);
                     <th>Payoff</th>
                     <th>Status</th>
                     <th>Ação usada?</th>
+                    <th>Última ação da rodada</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -123,7 +165,10 @@ $pendingCount = max(0, $totalTeams - $actedCount);
                         $teamStatus = 'classificado';
                         $teamStatusClass = 'status-qualified';
                     }
-                    $hasTeamActed = !empty($actedByTeam[(int)$team['id']]);
+                    $teamId = (int)$team['id'];
+                    $hasTeamActed = !empty($actedByTeam[$teamId]);
+                    $lastAction = $lastActionByTeam[$teamId] ?? null;
+                    $lastActionLabel = $lastAction ? ($actionLabels[$lastAction['action_type'] ?? ''] ?? (string)($lastAction['action_type'] ?? '—')) : '—';
                     ?>
                     <tr>
                         <td><strong><?= $e($team['name']) ?></strong></td>
@@ -134,6 +179,7 @@ $pendingCount = max(0, $totalTeams - $actedCount);
                         <td><strong><?= $money($score) ?></strong></td>
                         <td><span class="liquidity-badge <?= $teamStatusClass ?>"><?= $e($teamStatus) ?></span></td>
                         <td><span class="liquidity-badge <?= $hasTeamActed ? 'status-qualified' : 'status-pending' ?>"><?= $hasTeamActed ? 'Sim' : 'Não' ?></span></td>
+                        <td><?= $e($lastActionLabel) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>

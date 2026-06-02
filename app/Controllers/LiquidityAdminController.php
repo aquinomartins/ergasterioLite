@@ -7,6 +7,7 @@ use App\Core\Session;
 use App\Core\Csrf;
 use App\Repositories\LiquidityActionRepository;
 use App\Repositories\LiquidityTeamRepository;
+use App\Repositories\LiquidityRoundRepository;
 use App\Services\LiquidityPoolService;
 use App\Services\LiquidityPredictionMarketService;
 use DomainException;
@@ -33,14 +34,22 @@ final class LiquidityAdminController extends Controller
         $session = $state['session'];
         $round = (int) ($session['current_round'] ?? 1);
         $teams = (new LiquidityTeamRepository())->getBySessionId($sid);
+        $currentRoundState = (new LiquidityRoundRepository())->getCurrentRound($sid, $round);
         $actionRepo = new LiquidityActionRepository();
         $actedByTeam = [];
-        foreach ($teams as $team) { $actedByTeam[(int)$team['id']] = $actionRepo->hasTeamActed($sid, $round, (int)$team['id']); }
+        $lastActionByTeam = [];
+        foreach ($teams as $team) {
+            $teamId = (int)$team['id'];
+            $actedByTeam[$teamId] = $actionRepo->hasTeamActed($sid, $round, $teamId);
+            $lastActionByTeam[$teamId] = $actionRepo->getLastActionForTeam($sid, $round, $teamId);
+        }
 
         $this->view('liquidity.admin.show', [
             'state' => $state,
             'teams' => $teams,
             'actedByTeam' => $actedByTeam,
+            'lastActionByTeam' => $lastActionByTeam,
+            'currentRoundState' => $currentRoundState,
             'predictionMarkets' => $this->pred->getMarketsForSession($sid),
         ]);
     }
