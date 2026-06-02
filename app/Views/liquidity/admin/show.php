@@ -2,6 +2,7 @@
 $s = $state['session'] ?? [];
 $pool = $state['pool'] ?? [];
 $ranking = $state['ranking'] ?? [];
+$finalRanking = $state['final_ranking'] ?? [];
 $feed = $state['feed'] ?? [];
 $lastActionByTeam = $lastActionByTeam ?? [];
 $currentRoundState = $currentRoundState ?? [];
@@ -47,7 +48,20 @@ foreach ($actionableTeamIds as $teamId) {
 }
 $actionableTeamsCount = count($actionableTeamIds);
 $pendingCount = max(0, $actionableTeamsCount - $actedCount);
-$semifinalWasEvaluated = in_array((string)($s['session_phase'] ?? 'regular'), ['semifinal_evaluated', 'final', 'closed'], true) || $semifinalClassifiedCount > 0 || $semifinalEliminatedCount > 0;
+$sessionPhase = (string)($s['session_phase'] ?? 'regular');
+$finalWasClosed = in_array($sessionPhase, ['final_closed', 'closed'], true) || (string)($s['status'] ?? '') === 'closed';
+$semifinalWasEvaluated = in_array($sessionPhase, ['semifinal_evaluated', 'final', 'final_closed', 'closed'], true) || $semifinalClassifiedCount > 0 || $semifinalEliminatedCount > 0;
+$finalistCount = count($finalRanking);
+$finalWinners = array_values(array_filter($finalRanking, static fn($team): bool => in_array((string)($team['display_status'] ?? $team['final_status'] ?? ''), ['Vencedor', 'Vencedor empatado'], true)));
+$finalWinnerText = $finalWinners ? implode(', ', array_map(static fn($team): string => (string)($team['name'] ?? '-'), $finalWinners)) : '';
+$phaseLabels = [
+    'regular' => 'regular',
+    'semifinal' => 'semifinal',
+    'semifinal_evaluated' => 'semifinal avaliada',
+    'final' => 'final',
+    'final_closed' => 'final encerrada',
+    'closed' => 'final encerrada',
+];
 $teamNamesById = [];
 foreach ($teams as $team) {
     $teamNamesById[(int)($team['id'] ?? 0)] = (string)($team['name'] ?? '-');
@@ -65,7 +79,7 @@ $describeLastAction = static function (?array $lastAction) use ($actionLabels, $
     }
     return $label ?: '—';
 };
-$roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status'] ?? '') === 'closed') ? 'Encerrada' : (($actionableTeamsCount > 0 && $pendingCount === 0) ? 'Todos já agiram' : 'Em andamento');
+$roundStatus = ($finalWasClosed || ($currentRoundState['status'] ?? '') === 'closed') ? 'Encerrada' : (($actionableTeamsCount > 0 && $pendingCount === 0) ? 'Todos já agiram' : 'Em andamento');
 ?>
 <div class="liquidity-dashboard liquidity-admin-page">
     <section class="liquidity-card liquidity-hero-card">
@@ -75,7 +89,7 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
             <div class="liquidity-meta-grid">
                 <span><strong>Código:</strong> <?= $e($s['access_code'] ?? '-') ?></span>
                 <span><strong>Rodada:</strong> <?= (int)($s['current_round'] ?? 0) ?>/<?= (int)($s['total_rounds'] ?? 0) ?></span>
-                <span><strong>Fase:</strong> <?= $e(($s['session_phase'] ?? 'regular') === 'semifinal_evaluated' ? 'semifinal avaliada' : ($s['session_phase'] ?? 'regular')) ?></span>
+                <span><strong>Fase:</strong> <?= $e($phaseLabels[$sessionPhase] ?? $sessionPhase) ?></span>
                 <span><strong>Status:</strong> <?= $e($s['status'] ?? '-') ?></span>
             </div>
         </div>
@@ -154,7 +168,7 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                 </tbody>
             </table>
         </div>
-        <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/advance-round" class="liquidity-inline-control action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Encerrar rodada</button></form>
+        <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/advance-round" class="liquidity-inline-control action-card"><?= \App\Core\Csrf::input() ?><button type="submit" <?= $finalWasClosed ? 'disabled' : '' ?>>Encerrar rodada</button><?php if ($finalWasClosed): ?><small>A final já foi encerrada. A rodada não pode mais ser alterada.</small><?php endif; ?></form>
     </section>
 
     <section class="liquidity-card pool-state-card <?= $e('pool-status-' . ($pool['status'] ?? 'empty')) ?>">
@@ -219,6 +233,47 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
         </div>
     </section>
 
+    <section class="liquidity-card liquidity-final-card">
+        <div class="liquidity-card-header">
+            <p class="liquidity-eyebrow">Critério definitivo</p>
+            <h2>Final</h2>
+        </div>
+        <p><strong>Na final, vence o time classificado que tiver mais dinheiro em reais.</strong><br>BTC, NFT e cotas não contam como critério de vitória.</p>
+        <div class="liquidity-stat-grid">
+            <article class="liquidity-stat liquidity-stat-success"><span>Finalistas</span><strong><?= $finalistCount ?></strong></article>
+            <article class="liquidity-stat"><span>Status</span><strong><?= $finalWasClosed ? 'Encerrada' : 'Pendente' ?></strong></article>
+            <article class="liquidity-stat <?= $finalWinners ? 'liquidity-stat-success' : '' ?>"><span>Vencedor</span><strong><?= $finalWinnerText !== '' ? $e($finalWinnerText) : '—' ?></strong></article>
+        </div>
+        <?php if (!$semifinalWasEvaluated): ?>
+            <p class="warning-text">A semifinal precisa ser avaliada antes da final.</p>
+        <?php endif; ?>
+        <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/close-final" class="liquidity-inline-control action-card">
+            <?= \App\Core\Csrf::input() ?>
+            <button type="submit" <?= $finalWasClosed ? 'disabled' : '' ?>>Encerrar final</button>
+            <?php if ($finalWasClosed): ?><small>A final já foi encerrada.</small><?php endif; ?>
+        </form>
+        <h3>Ranking da final</h3>
+        <p>Na final, vence quem tiver mais dinheiro em reais.</p>
+        <div class="liquidity-table-wrap">
+            <table class="liquidity-table">
+                <thead><tr><th>Posição</th><th>Equipe</th><th>Caixa R$</th><th>Status</th></tr></thead>
+                <tbody>
+                <?php if (!$finalRanking): ?>
+                    <tr><td colspan="4">Nenhum finalista definido ainda.</td></tr>
+                <?php endif; ?>
+                <?php foreach ($finalRanking as $row): ?>
+                    <tr>
+                        <td><strong><?= (int)($row['final_position'] ?? 0) ?>º</strong></td>
+                        <td><?= $e($row['name'] ?? '-') ?></td>
+                        <td><?= $money($row['final_cash_score'] ?? $row['cash_balance'] ?? 0) ?></td>
+                        <td><span class="liquidity-badge <?= in_array((string)($row['display_status'] ?? ''), ['Vencedor', 'Vencedor empatado'], true) ? 'status-qualified' : 'status-active' ?>"><?= $e($row['display_status'] ?? 'Classificado para a final') ?></span></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <section class="liquidity-card liquidity-teams-card">
         <div class="liquidity-card-header">
             <p class="liquidity-eyebrow">Participantes</p>
@@ -246,7 +301,10 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                     $score = (float)$team['cash_balance'] + ((float)$team['btc_balance'] * (float)$s['btc_sell_price']) + ((int)$team['nft_balance'] * (float)$s['nft_sell_price']) + ((int)$team['pool_shares'] * (float)$s['share_sell_price']);
                     $teamStatus = 'Em jogo';
                     $teamStatusClass = 'status-active';
-                    if (!empty($team['is_eliminated'])) {
+                    if (!empty($team['final_status'])) {
+                        $teamStatus = (string)$team['final_status'];
+                        $teamStatusClass = in_array($teamStatus, ['Vencedor', 'Vencedor empatado'], true) ? 'status-qualified' : ($teamStatus === 'Eliminado na semifinal' ? 'status-eliminated' : 'status-active');
+                    } elseif (!empty($team['is_eliminated'])) {
                         $teamStatus = 'Eliminado na semifinal';
                         $teamStatusClass = 'status-eliminated';
                     } elseif (!empty($team['qualified_for_final'])) {
@@ -283,6 +341,7 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
             <h2>Registrar ação do time</h2>
         </div>
         <p>Escolha o time principal, a ação da rodada e, para operações de mercado, informe time alvo, quantidade e preço unitário. O backend valida caixa, ativos, cotas e bloqueia a segunda ação apenas do time principal.</p>
+        <?php if ($finalWasClosed): ?><p class="warning-text">A final já foi encerrada. Nenhuma nova ação pode ser registrada.</p><?php endif; ?>
         <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/actions" class="liquidity-team-action-form" data-admin-action-form>
             <?= \App\Core\Csrf::input() ?>
             <div class="liquidity-form-grid">
@@ -292,9 +351,9 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                         <option value="">Selecione a equipe</option>
                         <?php foreach ($teams as $team): ?>
                             <?php $teamId = (int)$team['id']; ?>
-                            <?php $teamCannotAct = !empty($actedByTeam[$teamId]) || !empty($team['is_eliminated']); ?>
+                            <?php $teamCannotAct = $finalWasClosed || !empty($actedByTeam[$teamId]) || !empty($team['is_eliminated']); ?>
                             <option value="<?= $teamId ?>" <?= $teamCannotAct ? 'disabled' : '' ?>>
-                                <?= $e($team['name'] ?? '-') ?><?= !empty($team['is_eliminated']) ? ' — eliminado na semifinal' : (!empty($actedByTeam[$teamId]) ? ' — ação já usada' : '') ?>
+                                <?= $e($team['name'] ?? '-') ?><?= $finalWasClosed ? ' — final encerrada' : (!empty($team['is_eliminated']) ? ' — eliminado na semifinal' : (!empty($actedByTeam[$teamId]) ? ' — ação já usada' : '')) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -322,7 +381,7 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                     <select name="target_team_id">
                         <option value="">Selecione a contraparte</option>
                         <?php foreach ($teams as $team): ?>
-                            <option value="<?= (int)$team['id'] ?>" <?= !empty($team['is_eliminated']) ? 'disabled' : '' ?>><?= $e($team['name'] ?? '-') ?><?= !empty($team['is_eliminated']) ? ' — eliminado' : '' ?></option>
+                            <option value="<?= (int)$team['id'] ?>" <?= ($finalWasClosed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?>><?= $e($team['name'] ?? '-') ?><?= $finalWasClosed ? ' — final encerrada' : (!empty($team['is_eliminated']) ? ' — eliminado' : '') ?></option>
                         <?php endforeach; ?>
                     </select>
                 </label>
@@ -342,7 +401,7 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
                 <span><strong><?= $actedCount ?></strong> com ação registrada</span>
                 <span><strong><?= $pendingCount ?></strong> aguardando decisão</span>
             </div>
-            <button type="submit">Registrar ação</button>
+            <button type="submit" <?= $finalWasClosed ? 'disabled' : '' ?>>Registrar ação</button>
         </form>
     </section>
 
@@ -391,10 +450,10 @@ $roundStatus = (($s['status'] ?? '') === 'closed' || ($currentRoundState['status
         <div class="action-grid liquidity-control-grid">
             <a class="action-card" href="/liquidity/<?= (int)$s['id'] ?>/teams"><h3>Gerenciar equipes</h3></a>
             <a class="action-card" target="_blank" href="/liquidity/<?= (int)$s['id'] ?>/projector"><h3>Abrir projetor</h3></a>
-            <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/advance-round" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Encerrar rodada</button></form>
+            <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/advance-round" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit" <?= $finalWasClosed ? 'disabled' : '' ?>>Encerrar rodada</button></form>
             <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/evaluate-semifinal" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Avaliar semifinal</button></form>
-            <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/close-final" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Encerrar final</button></form>
-            <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/close" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit">Encerrar sessão</button></form>
+            <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/close-final" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit" <?= $finalWasClosed ? 'disabled' : '' ?>>Encerrar final</button></form>
+            <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/close" class="action-card"><?= \App\Core\Csrf::input() ?><button type="submit" <?= $finalWasClosed ? 'disabled' : '' ?>>Encerrar sessão</button></form>
         </div>
     </section>
 </div>

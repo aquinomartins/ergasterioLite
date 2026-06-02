@@ -2,6 +2,8 @@
 $e = static fn($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $money = static fn($v): string => 'R$ ' . number_format((float) $v, 2, ',', '.');
 $status = (string) ($pool['status'] ?? 'empty');
+$sessionPhase = (string) ($session['session_phase'] ?? 'regular');
+$finalWasClosed = in_array($sessionPhase, ['final_closed', 'closed'], true) || (string) ($session['status'] ?? '') === 'closed';
 $teamId = (int) ($team['id'] ?? 0);
 $currentTeamPosition = null;
 foreach ($ranking as $index => $entry) {
@@ -25,6 +27,7 @@ $actionMeta = [
         <h1>Piscina de Liquidez — <?= $e($session['name'] ?? 'Sessão') ?></h1>
         <p>Equipe: <strong><?= $e($team['name'] ?? '-') ?></strong></p>
         <p>Rodada <strong><?= (int) $currentRound ?></strong> de <?= (int) ($session['total_rounds'] ?? 0) ?> · Fase: <strong><?= $e($session['session_phase'] ?? 'regular') ?></strong> · Status: <strong><?= $e($session['status'] ?? '-') ?></strong></p>
+        <?php if ($finalWasClosed): ?><p class="warning-text">A final já foi encerrada. Nenhuma nova ação pode ser registrada.</p><?php endif; ?>
         <?php if (!empty($team['is_eliminated'])): ?><p class="warning-text">Este time foi eliminado na semifinal e não pode mais realizar ações.</p><?php endif; ?>
         <?php if ($hasActed): ?><p class="warning-text">Este time já usou sua ação nesta rodada. Aguarde o professor avançar para a próxima rodada.</p><?php endif; ?>
     </section>
@@ -55,23 +58,23 @@ $actionMeta = [
         <?php if ($lastAction): ?><p>Última ação registrada: <strong><?= $e($lastAction['action_type'] ?? '-') ?></strong> (qtd: <?= number_format((float)($lastAction['quantity'] ?? 0), 2, ',', '.') ?>)</p><?php endif; ?>
         <div class="action-grid">
             <?php foreach ($actionMeta as $type => $meta): ?>
-                <form method="POST" action="/liquidity/team/action" class="action-card <?= ($hasActed || !empty($team['is_eliminated'])) ? 'action-disabled' : '' ?>">
+                <form method="POST" action="/liquidity/team/action" class="action-card <?= ($finalWasClosed || $hasActed || !empty($team['is_eliminated'])) ? 'action-disabled' : '' ?>">
                     <?= \App\Core\Csrf::input() ?>
                     <input type="hidden" name="action_type" value="<?= $e($type) ?>">
                     <h3><?= $e($meta['label']) ?></h3>
                     <p><?= $e($meta['copy']) ?></p>
                     <ul class="action-effect"><?php foreach ($meta['effect'] as $effect): ?><li><?= $e($effect) ?></li><?php endforeach; ?></ul>
                     <?php if (!empty($meta['market'])): ?>
-                        <input type="number" name="quantity" min="0.01" step="0.01" value="1" placeholder="Quantidade" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
-                        <select name="target_team_id" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
+                        <input type="number" name="quantity" min="0.01" step="0.01" value="1" placeholder="Quantidade" <?= ($finalWasClosed || $hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
+                        <select name="target_team_id" <?= ($finalWasClosed || $hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
                             <option value=""><?= $e($meta['target'] ?? 'Time alvo') ?></option>
                             <?php foreach ($ranking as $counterparty): if ((int)($counterparty['id'] ?? 0) === $teamId) continue; ?>
                                 <option value="<?= (int)$counterparty['id'] ?>"><?= $e($counterparty['name'] ?? '-') ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <input type="number" name="price" min="0.01" step="0.01" placeholder="Preço unitário em R$" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
+                        <input type="number" name="price" min="0.01" step="0.01" placeholder="Preço unitário em R$" <?= ($finalWasClosed || $hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?> required>
                     <?php endif; ?>
-                    <button type="submit" <?= ($hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?>><?= $e($meta['label']) ?></button>
+                    <button type="submit" <?= ($finalWasClosed || $hasActed || !empty($team['is_eliminated'])) ? 'disabled' : '' ?>><?= $e($meta['label']) ?></button>
                 </form>
             <?php endforeach; ?>
         </div>
