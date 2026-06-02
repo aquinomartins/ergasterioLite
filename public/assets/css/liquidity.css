@@ -483,3 +483,55 @@ th {
         max-width: none;
     }
 }
+
+.liquidity-team-action-form {
+    display: grid;
+    gap: 14px;
+}
+
+.liquidity-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.liquidity-team-action-form label {
+    display: grid;
+    gap: 6px;
+    color: #334155;
+    font-weight: 700;
+}
+
+.liquidity-team-action-form label > span {
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #475569;
+}
+
+.liquidity-team-action-form select,
+.liquidity-team-action-form input {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fff;
+    color: #0f172a;
+    font: inherit;
+}
+
+.liquidity-team-action-form button[type="submit"] {
+    justify-self: start;
+    border: 0;
+    border-radius: 10px;
+    padding: 11px 16px;
+    background: #0369a1;
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.liquidity-team-action-form button[type="submit"]:disabled {
+    background: #94a3b8;
+    cursor: wait;
+}
