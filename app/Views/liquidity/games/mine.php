@@ -12,15 +12,25 @@ $statusLabels = [
     'semifinal' => 'Semifinal',
     'closed' => 'Encerrado',
 ];
+$ownedGames = isset($ownedGames) && is_array($ownedGames) ? $ownedGames : [];
+$participantGames = isset($participantGames) && is_array($participantGames) ? $participantGames : [];
 $statusClass = static function (string $status): string {
-    return match ($status) {
-        'approved' => 'status-approved',
-        'rejected' => 'status-rejected',
-        'removed' => 'status-removed',
-        'active', 'semifinal' => 'status-active',
-        'finished', 'closed' => 'status-finished',
-        default => 'status-pending',
-    };
+    switch ($status) {
+        case 'approved':
+            return 'status-approved';
+        case 'rejected':
+            return 'status-rejected';
+        case 'removed':
+            return 'status-removed';
+        case 'active':
+        case 'semifinal':
+            return 'status-active';
+        case 'finished':
+        case 'closed':
+            return 'status-finished';
+        default:
+            return 'status-pending';
+    }
 };
 $label = static fn($status) => $statusLabels[(string)$status] ?? ucfirst((string)$status);
 $formatDate = static function ($value): string {
