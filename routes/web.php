@@ -13,6 +13,7 @@ use App\Controllers\LiquidityAdminController;
 use App\Controllers\LiquidityApiController;
 use App\Controllers\LiquidityTeamController;
 use App\Controllers\LiquidityPredictionController;
+use App\Controllers\LiquidityGameController;
 
 $app->get('/', [HomeController::class, 'index']);
 $app->get('/register', [AuthController::class, 'showRegister'], ['guest']);
@@ -47,8 +48,15 @@ $app->post('/markets/{id}/positions', [PositionController::class, 'store'], ['au
 $app->get('/rankings', [RankingController::class, 'index']);
 
 $app->get('/liquidity', [LiquidityAdminController::class, 'index']);
-$app->get('/liquidity/create', [LiquidityAdminController::class, 'create']);
-$app->post('/liquidity', [LiquidityAdminController::class, 'store']);
+$app->get('/liquidity/create', [LiquidityGameController::class, 'create'], ['auth']);
+$app->post('/liquidity', [LiquidityGameController::class, 'store'], ['auth']);
+$app->get('/liquidity/my-games', [LiquidityGameController::class, 'myGames'], ['auth']);
+$app->get('/liquidity/join', [LiquidityGameController::class, 'joinForm'], ['auth']);
+$app->post('/liquidity/join', [LiquidityGameController::class, 'join'], ['auth']);
+$app->get('/liquidity/games/{gameId}/teacher', [LiquidityGameController::class, 'teacherPanel'], ['auth']);
+$app->post('/liquidity/games/{gameId}/participants/{participantId}/approve', [LiquidityGameController::class, 'approve'], ['auth']);
+$app->post('/liquidity/games/{gameId}/participants/{participantId}/reject', [LiquidityGameController::class, 'reject'], ['auth']);
+$app->get('/liquidity/games/{gameId}/my-team', [LiquidityGameController::class, 'myTeam'], ['auth']);
 $app->get('/liquidity/{id}', [LiquidityAdminController::class, 'show']);
 $app->get('/liquidity/{id}/teams', [LiquidityAdminController::class, 'teams']);
 $app->post('/liquidity/{id}/teams', [LiquidityAdminController::class, 'createTeam']);

@@ -13,6 +13,9 @@ use App\Core\Csrf;
         <nav class="site-nav" data-nav>
             <a href="/">Início</a>
             <a href="/liquidity">Piscina de Liquidez</a>
+            <?php if ($currentUser): ?>
+                <a href="/liquidity/my-games">Meus jogos</a>
+            <?php endif; ?>
             <a href="/artists">Artistas</a>
             <a href="/artworks">Obras</a>
             <a href="/markets">Mercados</a>
