@@ -3,6 +3,8 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Auth;
+use App\Core\Database;
 use App\Core\Session;
 use App\Core\Csrf;
 use App\Repositories\LiquidityActionRepository;
@@ -30,13 +32,17 @@ final class LiquidityAdminController extends Controller
         return $this->pred ??= new LiquidityPredictionMarketService();
     }
 
+
+    private function isMasterGold(): bool { $u=Auth::user(); return strtolower((string)($u['role'] ?? '')) === 'master_gold'; }
+    private function requireAdminAccess(int $sid): void { if ($this->isMasterGold()) return; $pdo=Database::connection(); $st=$pdo->prepare('SELECT owner_user_id FROM liquidity_games WHERE id=? LIMIT 1'); $st->execute([$sid]); $owner=$st->fetchColumn(); if ($owner === false || (int)$owner !== (int)Auth::id()) { http_response_code(403); exit('Você não tem permissão para acessar o painel administrativo de decisões.'); } }
+
     public function index(): void { $this->view('liquidity.admin.index', ['sessions' => (new \App\Repositories\LiquiditySessionRepository())->getAll()]); }
     public function create(): void { $this->view('liquidity.admin.create'); }
     public function store(): void { try { $se = $this->liquidityService()->createSession($_POST, null); $this->redirectTo('/liquidity/' . $se['id']); } catch (DomainException $e) { Session::flash('error', $e->getMessage()); $this->redirectTo('/liquidity/create'); } }
 
     public function show(string $id): void
     {
-        $sid = (int) $id;
+        $sid = (int) $id; $this->requireAdminAccess($sid);
         $state = $this->liquidityService()->getProjectorState($sid);
         $session = $state['session'];
         $round = (int) ($session['current_round'] ?? 1);
@@ -61,11 +67,12 @@ final class LiquidityAdminController extends Controller
         ]);
     }
 
-    public function teams(string $id): void { $this->view('liquidity.admin.teams', ['sessionId' => (int) $id, 'teams' => (new LiquidityTeamRepository())->getBySessionId((int) $id)]); }
-    public function createTeam(string $id): void { $this->liquidityService()->createTeam((int) $id, (string) ($_POST['name'] ?? '')); $this->redirectTo('/liquidity/' . $id . '/teams'); }
+    public function teams(string $id): void { $this->requireAdminAccess((int)$id); $this->view('liquidity.admin.teams', ['sessionId' => (int) $id, 'teams' => (new LiquidityTeamRepository())->getBySessionId((int) $id)]); }
+    public function createTeam(string $id): void { $this->requireAdminAccess((int)$id); $this->liquidityService()->createTeam((int) $id, (string) ($_POST['name'] ?? '')); $this->redirectTo('/liquidity/' . $id . '/teams'); }
 
     public function registerTeamAction(string $id): void
     {
+        $this->requireAdminAccess((int)$id);
         if (!Csrf::verifyFromRequest()) {
             Session::flash('error', 'CSRF inválido.');
             $this->redirectTo('/liquidity/' . $id);
@@ -78,6 +85,11 @@ final class LiquidityAdminController extends Controller
         }
 
         try {
+            $isMarket = in_array($actionType, ['buy_btc','sell_btc','buy_nft','sell_nft','buy_share','sell_share'], true);
+            if ($isMarket && $this->isMasterGold()) {
+                $parts = explode('_', $actionType, 2);
+                $this->liquidityService()->createTradeProposal((int)$id, (int)($_POST['team_id'] ?? 0), (int)($_POST['target_team_id'] ?? 0), (int)Auth::id(), $parts[0], $parts[1] === 'share' ? 'share' : $parts[1], (float)($_POST['quantity'] ?? 0), (float)($_POST['price'] ?? 0), true);
+            } else {
             $this->liquidityService()->submitTeamAction(
                 (int) $id,
                 (int) ($_POST['team_id'] ?? 0),
@@ -88,6 +100,7 @@ final class LiquidityAdminController extends Controller
                     'price' => isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : null,
                 ]
             );
+            }
             Session::flash('success', 'Ação do time registrada com sucesso.');
         } catch (DomainException $e) {
             Session::flash('error', $e->getMessage());
@@ -100,6 +113,7 @@ final class LiquidityAdminController extends Controller
 
     public function advanceRound(string $id): void
     {
+        $this->requireAdminAccess((int)$id);
         if (!Csrf::verifyFromRequest()) {
             Session::flash('error', 'CSRF inválido.');
             $this->redirectTo('/liquidity/' . $id);
