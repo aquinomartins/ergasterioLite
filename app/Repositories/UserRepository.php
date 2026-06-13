@@ -43,7 +43,7 @@ final class UserRepository
     public function findWithProfileById(int $id): ?array
     {
         $statement = $this->connection()->prepare(
-            'SELECT u.id, u.email, u.status, u.created_at, u.updated_at,
+            'SELECT u.id, u.email, u.status, u.role, u.created_at, u.updated_at,
                     p.display_name, p.username, p.bio
              FROM users u
              LEFT JOIN profiles p ON p.user_id = u.id

@@ -58,6 +58,9 @@ $app->post('/liquidity/games/{gameId}/participants/{participantId}/approve', [Li
 $app->post('/liquidity/games/{gameId}/participants/{participantId}/reject', [LiquidityGameController::class, 'reject'], ['auth']);
 $app->get('/liquidity/games/{gameId}/my-team', [LiquidityGameController::class, 'myTeam'], ['auth']);
 $app->post('/liquidity/games/{gameId}/my-team/action', [LiquidityGameController::class, 'submitMyTeamAction'], ['auth']);
+$app->post('/liquidity/games/{gameId}/my-team/trades', [LiquidityGameController::class, 'createTradeProposal'], ['auth']);
+$app->post('/liquidity/games/{gameId}/trades/{proposalId}/approve', [LiquidityGameController::class, 'approveTradeProposal'], ['auth']);
+$app->post('/liquidity/games/{gameId}/trades/{proposalId}/reject', [LiquidityGameController::class, 'rejectTradeProposal'], ['auth']);
 $app->post('/liquidity/games/{gameId}/advance-round', [LiquidityGameController::class, 'advanceGameRound'], ['auth']);
 $app->get('/liquidity/games/{gameId}/arena', [LiquidityGameController::class, 'arena']);
 $app->get('/liquidity/{id}', [LiquidityAdminController::class, 'show'], ['auth']);
