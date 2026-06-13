@@ -13,6 +13,7 @@ use App\Repositories\LiquidityActionRepository;
 use App\Repositories\LiquidityEventRepository;
 use App\Repositories\LiquidityGameRepository;
 use App\Repositories\LiquidityParticipantRepository;
+use App\Repositories\LiquidityRoundRepository;
 use App\Repositories\LiquidityTeamRepository;
 use App\Repositories\UserRepository;
 use App\Services\LiquidityPoolService;
@@ -83,7 +84,8 @@ final class LiquidityGameController extends Controller
         $actionRepo = new LiquidityActionRepository($this->pdo);
         $actedByTeam = []; $lastActionByTeam = [];
         foreach ($teams as $team) { $tid = (int) $team['id']; $actedByTeam[$tid] = $actionRepo->hasTeamActed((int) $game['id'], $round, $tid); $lastActionByTeam[$tid] = $this->getLastActionForTeam((int) $game['id'], $tid); }
-        $this->view('liquidity.games.teacher', ['game' => $game, 'pendingParticipants' => $participants->getByGame((int) $game['id'], 'pending'), 'approvedParticipants' => $participants->getByGame((int) $game['id'], 'approved'), 'rejectedParticipants' => $participants->getByGame((int) $game['id'], 'rejected'), 'teams' => $teams, 'actedByTeam' => $actedByTeam, 'lastActionByTeam' => $lastActionByTeam, 'events' => (new LiquidityEventRepository($this->pdo))->getRecentBySession((int) $game['id'], 30)]);
+        $currentRoundState = (new LiquidityRoundRepository($this->pdo))->getCurrentRound((int) $game['id'], $round);
+        $this->view('liquidity.games.teacher', ['game' => $game, 'pendingParticipants' => $participants->getByGame((int) $game['id'], 'pending'), 'approvedParticipants' => $participants->getByGame((int) $game['id'], 'approved'), 'rejectedParticipants' => $participants->getByGame((int) $game['id'], 'rejected'), 'teams' => $teams, 'actedByTeam' => $actedByTeam, 'lastActionByTeam' => $lastActionByTeam, 'currentRoundState' => $currentRoundState, 'events' => (new LiquidityEventRepository($this->pdo))->getRecentBySession((int) $game['id'], 30)]);
     }
 
     public function approve(string $gameId, string $participantId): void
@@ -109,7 +111,8 @@ final class LiquidityGameController extends Controller
         if ($participant['status'] !== 'approved') { $message = $participant['status'] === 'rejected' ? 'Sua solicitação para este jogo foi recusada.' : 'Sua entrada ainda aguarda aprovação do professor.'; $this->view('liquidity.games.my_team', ['game' => $game, 'participant' => $participant, 'message' => $message]); return; }
         $team = (new LiquidityTeamRepository($this->pdo))->findById((int) $participant['team_id']); if (!$team || (int)($team['game_id'] ?? $team['session_id']) !== (int)$game['id']) { http_response_code(403); echo 'Equipe inválida.'; return; }
         $actionRepo = new LiquidityActionRepository($this->pdo); $round = (int)$game['current_round'];
-        $this->view('liquidity.games.my_team', ['game' => $game, 'participant' => $participant, 'team' => $team, 'hasActed' => $actionRepo->hasTeamActed((int)$game['id'], $round, (int)$team['id']), 'lastAction' => $this->getLastActionForTeam((int)$game['id'], (int)$team['id'])]);
+        $roundState = (new LiquidityRoundRepository($this->pdo))->getCurrentRound((int)$game['id'], $round);
+        $this->view('liquidity.games.my_team', ['game' => $game, 'participant' => $participant, 'team' => $team, 'hasActed' => $actionRepo->hasTeamActed((int)$game['id'], $round, (int)$team['id']), 'roundState' => $roundState, 'lastAction' => $this->getLastActionForTeam((int)$game['id'], (int)$team['id']), 'lastDividend' => $this->getLastDividendForTeam((int)$game['id'], (int)$team['id'])]);
     }
 
     public function submitMyTeamAction(string $gameId): void
@@ -122,6 +125,8 @@ final class LiquidityGameController extends Controller
         $action = (string)($_POST['action_type'] ?? '');
         if (!in_array($action, ['deposit_nft', 'withdraw_nft_btc', 'withdraw_nft_cash', 'pass'], true)) { Session::flash('error', 'Ação inválida.'); $this->redirectTo('/liquidity/games/' . (int)$game['id'] . '/my-team'); }
         try {
+            $roundState = (new LiquidityRoundRepository($this->pdo))->getCurrentRound((int)$game['id'], (int)$game['current_round']);
+            if (($roundState['status'] ?? 'open') !== 'open') { throw new DomainException('Rodada encerrada. Aguarde o professor iniciar a próxima rodada.'); }
             (new LiquidityPoolService($this->pdo))->submitTeamAction((int)$game['id'], (int)$team['id'], $action, 1.0);
             $messages = ['deposit_nft' => 'Você depositou 1 NFT na piscina, recebeu 10 BTC e ganhou 1 cota.', 'withdraw_nft_btc' => 'Você retirou 1 NFT da piscina pagando 11 BTC.', 'withdraw_nft_cash' => 'Você retirou 1 NFT da piscina pagando R$ 2.000.', 'pass' => 'Sua equipe passou a vez nesta rodada.'];
             Session::flash('success', $messages[$action]);
@@ -135,7 +140,7 @@ final class LiquidityGameController extends Controller
     {
         if (!Csrf::verifyFromRequest()) { Session::flash('error', 'CSRF inválido.'); $this->redirectTo('/liquidity/games/' . (int)$gameId . '/teacher'); }
         $game = $this->requireOwnedGame((int)$gameId);
-        try { (new LiquidityPoolService($this->pdo))->advanceRound((int)$game['id']); $this->pdo->prepare('UPDATE liquidity_games SET current_round = current_round + 1, status = IF(status = \'waiting\', \'active\', status), updated_at = NOW() WHERE id = ?')->execute([(int)$game['id']]); Session::flash('success', 'Rodada avançada com sucesso.'); }
+        try { $result = (new LiquidityPoolService($this->pdo))->advanceRound((int)$game['id']); $session = $this->pdo->prepare('SELECT current_round, session_phase FROM liquidity_sessions WHERE id = ?'); $session->execute([(int)$game['id']]); $sessionRow = $session->fetch() ?: ['current_round' => $result['next_round'], 'session_phase' => 'regular']; $status = ($sessionRow['session_phase'] ?? 'regular') === 'semifinal' ? 'semifinal' : 'active'; $this->pdo->prepare('UPDATE liquidity_games SET current_round = ?, status = ?, updated_at = NOW() WHERE id = ?')->execute([(int)$sessionRow['current_round'], $status, (int)$game['id']]); Session::flash('success', 'Rodada encerrada com taxa e dividendos aplicados.'); }
         catch (DomainException $e) { Session::flash('error', $e->getMessage()); }
         catch (\Throwable $e) { Session::flash('error', 'Não foi possível avançar a rodada agora.'); }
         $this->redirectTo('/liquidity/games/' . (int)$game['id'] . '/teacher');
@@ -147,7 +152,8 @@ final class LiquidityGameController extends Controller
         $teams = $this->getTeamsForGame((int)$game['id']); $round = (int)$game['current_round']; $actionRepo = new LiquidityActionRepository($this->pdo); $actedByTeam = [];
         foreach ($teams as &$team) { $team['estimated_wealth'] = (float)$team['cash_balance'] + ((float)$team['btc_balance'] * 100) + ((int)$team['nft_balance'] * 2000) + ((int)$team['pool_shares'] * 2000); $actedByTeam[(int)$team['id']] = $actionRepo->hasTeamActed((int)$game['id'], $round, (int)$team['id']); } unset($team);
         usort($teams, fn($a, $b) => ((float)$b['estimated_wealth'] <=> (float)$a['estimated_wealth']) ?: ((string)$a['name'] <=> (string)$b['name']));
-        $this->view('liquidity.games.arena', ['game' => $game, 'teams' => $teams, 'actedByTeam' => $actedByTeam, 'events' => (new LiquidityEventRepository($this->pdo))->getRecentBySession((int)$game['id'], 30)]);
+        $totalShares = array_sum(array_map(static fn($team): int => (int)($team['pool_shares'] ?? 0), $teams)); $poolValue = $totalShares * 2000; $estimatedDividendTotal = $poolValue * 0.10; $estimatedDividendPerShare = $totalShares > 0 ? $estimatedDividendTotal / $totalShares : 0.0;
+        $this->view('liquidity.games.arena', ['game' => $game, 'teams' => $teams, 'actedByTeam' => $actedByTeam, 'poolMetrics' => ['total_shares' => $totalShares, 'pool_value' => $poolValue, 'estimated_dividend_total' => $estimatedDividendTotal, 'estimated_dividend_per_share' => $estimatedDividendPerShare], 'events' => (new LiquidityEventRepository($this->pdo))->getRecentBySession((int)$game['id'], 30)]);
     }
 
     private function requireOwnedGame(int $gameId): array { $game = (new LiquidityGameRepository($this->pdo))->findById($gameId); if (!$game) { http_response_code(404); exit('Jogo não encontrado.'); } if ((int) $game['owner_user_id'] !== (int) Auth::id()) { http_response_code(403); exit('Acesso negado.'); } return $game; }
@@ -155,4 +161,5 @@ final class LiquidityGameController extends Controller
     private function createIndividualTeam(array $game, int $userId): int { $user = (new UserRepository($this->pdo))->findWithProfileById($userId) ?? ['id' => $userId]; $baseName = trim((string) ($user['display_name'] ?? $user['username'] ?? '')); $name = 'Equipe ' . ($baseName !== '' ? $baseName : 'Usuário #' . $userId); $loginCode = strtoupper(substr(bin2hex(random_bytes(3)), 0, 6)); $statement = $this->pdo->prepare('INSERT INTO liquidity_teams (session_id, game_id, name, login_code, cash_balance, btc_balance, nft_balance, pool_shares, status, created_at) VALUES (:session_id, :game_id, :name, :login_code, 1600.00, 0.00, 1, 0, \'active\', NOW())'); $statement->execute(['session_id' => (int) $game['id'], 'game_id' => (int) $game['id'], 'name' => $name, 'login_code' => $loginCode]); return (int) $this->pdo->lastInsertId(); }
     private function getTeamsForGame(int $gameId): array { $stmt = $this->pdo->prepare('SELECT * FROM liquidity_teams WHERE game_id = ? OR (game_id IS NULL AND session_id = ?) ORDER BY id'); $stmt->execute([$gameId, $gameId]); return $stmt->fetchAll(); }
     private function getLastActionForTeam(int $sessionId, int $teamId): ?array { $stmt = $this->pdo->prepare('SELECT * FROM liquidity_team_actions WHERE session_id = ? AND team_id = ? ORDER BY id DESC LIMIT 1'); $stmt->execute([$sessionId, $teamId]); $row = $stmt->fetch(); return $row ?: null; }
+    private function getLastDividendForTeam(int $sessionId, int $teamId): ?array { $stmt = $this->pdo->prepare("SELECT * FROM liquidity_events WHERE session_id = ? AND team_id = ? AND event_type = 'pool_dividend' ORDER BY id DESC LIMIT 1"); $stmt->execute([$sessionId, $teamId]); $row = $stmt->fetch(); return $row ?: null; }
 }
