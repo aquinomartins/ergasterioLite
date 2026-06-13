@@ -57,8 +57,23 @@ final class LiquidityGameController extends Controller
 
     public function myGames(): void
     {
-        $userId = (int) Auth::id();
-        $this->view('liquidity.games.mine', ['ownedGames' => (new LiquidityGameRepository($this->pdo))->getOwnedByUser($userId), 'participantGames' => (new LiquidityParticipantRepository($this->pdo))->getForUser($userId)]);
+        try {
+            $userId = (int) Auth::id();
+
+            $ownedGames = (new LiquidityGameRepository($this->pdo))->getOwnedByUser($userId);
+            $participantGames = (new LiquidityParticipantRepository($this->pdo))->getForUser($userId);
+
+            $this->view('liquidity.games.mine', [
+                'ownedGames' => $ownedGames,
+                'participantGames' => $participantGames,
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[my-games] ' . $e->getMessage());
+            error_log('[my-games trace] ' . $e->getTraceAsString());
+
+            http_response_code(500);
+            echo 'Não foi possível carregar seus jogos agora.';
+        }
     }
 
     public function joinForm(): void { $this->view('liquidity.games.join'); }

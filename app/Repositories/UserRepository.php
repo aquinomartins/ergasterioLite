@@ -11,7 +11,8 @@ use PDO;
 final class UserRepository
 {
     private ?PDO $pdo;
-    private static ?bool $usersRoleColumnExists = null;
+    /** @var array<string, bool> */
+    private static array $columnExistsCache = [];
 
     public function __construct(?PDO $pdo = null)
     {
@@ -43,10 +44,20 @@ final class UserRepository
 
     public function findWithProfileById(int $id): ?array
     {
-        $roleSelect = $this->usersRoleColumnExists() ? 'u.role' : "'user' AS role";
+        $selectColumns = [
+            'u.id',
+            'u.email',
+            $this->columnExists('users', 'status') ? 'u.status' : "'active' AS status",
+            $this->columnExists('users', 'role') ? 'u.role' : "'user' AS role",
+            $this->columnExists('users', 'created_at') ? 'u.created_at' : 'NULL AS created_at',
+            $this->columnExists('users', 'updated_at') ? 'u.updated_at' : 'NULL AS updated_at',
+            $this->columnExists('profiles', 'display_name') ? 'p.display_name' : 'NULL AS display_name',
+            $this->columnExists('profiles', 'username') ? 'p.username' : 'NULL AS username',
+            $this->columnExists('profiles', 'bio') ? 'p.bio' : 'NULL AS bio',
+        ];
+
         $statement = $this->connection()->prepare(
-            'SELECT u.id, u.email, u.status, ' . $roleSelect . ', u.created_at, u.updated_at,
-                    p.display_name, p.username, p.bio
+            'SELECT ' . implode(', ', $selectColumns) . '
              FROM users u
              LEFT JOIN profiles p ON p.user_id = u.id
              WHERE u.id = :id
@@ -58,10 +69,12 @@ final class UserRepository
         return $user ?: null;
     }
 
-    private function usersRoleColumnExists(): bool
+    private function columnExists(string $table, string $column): bool
     {
-        if (self::$usersRoleColumnExists !== null) {
-            return self::$usersRoleColumnExists;
+        $cacheKey = $table . '.' . $column;
+
+        if (array_key_exists($cacheKey, self::$columnExistsCache)) {
+            return self::$columnExistsCache[$cacheKey];
         }
 
         $statement = $this->connection()->prepare(
@@ -72,13 +85,13 @@ final class UserRepository
                AND COLUMN_NAME = :column'
         );
         $statement->execute([
-            'table' => 'users',
-            'column' => 'role',
+            'table' => $table,
+            'column' => $column,
         ]);
 
-        self::$usersRoleColumnExists = ((int) $statement->fetchColumn()) > 0;
+        self::$columnExistsCache[$cacheKey] = ((int) $statement->fetchColumn()) > 0;
 
-        return self::$usersRoleColumnExists;
+        return self::$columnExistsCache[$cacheKey];
     }
 
     public function create(User $user): int
