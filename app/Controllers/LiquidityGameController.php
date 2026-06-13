@@ -33,6 +33,7 @@ final class LiquidityGameController extends Controller
 
     public function store(): void
     {
+        if (!Csrf::verifyFromRequest()) { Session::flash('error', 'CSRF inválido.'); $this->redirectTo('/liquidity/create'); }
         $title = trim((string) ($_POST['title'] ?? $_POST['name'] ?? ''));
         $maxRounds = max(1, (int) ($_POST['max_rounds'] ?? 6));
         $maxParticipants = ($_POST['max_participants'] ?? '') !== '' ? max(1, (int) $_POST['max_participants']) : null;
@@ -63,6 +64,7 @@ final class LiquidityGameController extends Controller
 
     public function join(): void
     {
+        if (!Csrf::verifyFromRequest()) { Session::flash('error', 'CSRF inválido.'); $this->redirectTo('/liquidity/join'); }
         $code = strtoupper(trim((string) ($_POST['invite_code'] ?? '')));
         $games = new LiquidityGameRepository($this->pdo); $participants = new LiquidityParticipantRepository($this->pdo); $game = $games->findByInviteCode($code);
         if (!$game) { Session::flash('error', 'Código de convite não encontrado.'); $this->redirectTo('/liquidity/join'); }
@@ -109,7 +111,7 @@ final class LiquidityGameController extends Controller
         $game = (new LiquidityGameRepository($this->pdo))->findById((int) $gameId); if (!$game) { http_response_code(404); echo 'Jogo não encontrado.'; return; }
         $participant = (new LiquidityParticipantRepository($this->pdo))->findByGameAndUser((int) $game['id'], (int) Auth::id()); if (!$participant) { http_response_code(403); echo 'Você não participa deste jogo.'; return; }
         if ($participant['status'] !== 'approved') { $message = $participant['status'] === 'rejected' ? 'Sua solicitação para este jogo foi recusada.' : 'Sua entrada ainda aguarda aprovação do professor.'; $this->view('liquidity.games.my_team', ['game' => $game, 'participant' => $participant, 'message' => $message]); return; }
-        $team = (new LiquidityTeamRepository($this->pdo))->findById((int) $participant['team_id']); if (!$team || (int)($team['game_id'] ?? $team['session_id']) !== (int)$game['id']) { http_response_code(403); echo 'Equipe inválida.'; return; }
+        $team = (new LiquidityTeamRepository($this->pdo))->findById((int) $participant['team_id']); if (!$team || !$this->teamBelongsToGame($team, (int)$game['id'])) { http_response_code(403); echo 'Equipe inválida.'; return; }
         $actionRepo = new LiquidityActionRepository($this->pdo); $round = (int)$game['current_round'];
         $roundState = (new LiquidityRoundRepository($this->pdo))->getCurrentRound((int)$game['id'], $round);
         $this->view('liquidity.games.my_team', ['game' => $game, 'participant' => $participant, 'team' => $team, 'hasActed' => $actionRepo->hasTeamActed((int)$game['id'], $round, (int)$team['id']), 'roundState' => $roundState, 'lastAction' => $this->getLastActionForTeam((int)$game['id'], (int)$team['id']), 'lastDividend' => $this->getLastDividendForTeam((int)$game['id'], (int)$team['id'])]);
@@ -121,7 +123,7 @@ final class LiquidityGameController extends Controller
         $game = (new LiquidityGameRepository($this->pdo))->findById((int)$gameId); if (!$game) { http_response_code(404); echo 'Jogo não encontrado.'; return; }
         $participant = (new LiquidityParticipantRepository($this->pdo))->findByGameAndUser((int)$game['id'], (int)Auth::id());
         if (!$participant || $participant['status'] !== 'approved' || empty($participant['team_id'])) { http_response_code(403); echo 'Acesso negado.'; return; }
-        $team = (new LiquidityTeamRepository($this->pdo))->findById((int)$participant['team_id']); if (!$team || (int)($team['game_id'] ?? $team['session_id']) !== (int)$game['id']) { http_response_code(403); echo 'Equipe inválida.'; return; }
+        $team = (new LiquidityTeamRepository($this->pdo))->findById((int)$participant['team_id']); if (!$team || !$this->teamBelongsToGame($team, (int)$game['id'])) { http_response_code(403); echo 'Equipe inválida.'; return; }
         $action = (string)($_POST['action_type'] ?? '');
         if (!in_array($action, ['deposit_nft', 'withdraw_nft_btc', 'withdraw_nft_cash', 'pass'], true)) { Session::flash('error', 'Ação inválida.'); $this->redirectTo('/liquidity/games/' . (int)$game['id'] . '/my-team'); }
         try {
@@ -160,6 +162,7 @@ final class LiquidityGameController extends Controller
     private function generateInviteCode(): string { $repo = new LiquidityGameRepository($this->pdo); do { $code = 'PL-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6)); } while ($repo->inviteCodeExists($code)); return $code; }
     private function createIndividualTeam(array $game, int $userId): int { $user = (new UserRepository($this->pdo))->findWithProfileById($userId) ?? ['id' => $userId]; $baseName = trim((string) ($user['display_name'] ?? $user['username'] ?? '')); $name = 'Equipe ' . ($baseName !== '' ? $baseName : 'Usuário #' . $userId); $loginCode = strtoupper(substr(bin2hex(random_bytes(3)), 0, 6)); $statement = $this->pdo->prepare('INSERT INTO liquidity_teams (session_id, game_id, name, login_code, cash_balance, btc_balance, nft_balance, pool_shares, status, created_at) VALUES (:session_id, :game_id, :name, :login_code, 1600.00, 0.00, 1, 0, \'active\', NOW())'); $statement->execute(['session_id' => (int) $game['id'], 'game_id' => (int) $game['id'], 'name' => $name, 'login_code' => $loginCode]); return (int) $this->pdo->lastInsertId(); }
     private function getTeamsForGame(int $gameId): array { $stmt = $this->pdo->prepare('SELECT * FROM liquidity_teams WHERE game_id = ? OR (game_id IS NULL AND session_id = ?) ORDER BY id'); $stmt->execute([$gameId, $gameId]); return $stmt->fetchAll(); }
+    private function teamBelongsToGame(array $team, int $gameId): bool { $teamGameId = isset($team['game_id']) ? (int)$team['game_id'] : 0; return $teamGameId > 0 ? $teamGameId === $gameId : (int)($team['session_id'] ?? 0) === $gameId; }
     private function getLastActionForTeam(int $sessionId, int $teamId): ?array { $stmt = $this->pdo->prepare('SELECT * FROM liquidity_team_actions WHERE session_id = ? AND team_id = ? ORDER BY id DESC LIMIT 1'); $stmt->execute([$sessionId, $teamId]); $row = $stmt->fetch(); return $row ?: null; }
     private function getLastDividendForTeam(int $sessionId, int $teamId): ?array { $stmt = $this->pdo->prepare("SELECT * FROM liquidity_events WHERE session_id = ? AND team_id = ? AND event_type = 'pool_dividend' ORDER BY id DESC LIMIT 1"); $stmt->execute([$sessionId, $teamId]); $row = $stmt->fetch(); return $row ?: null; }
 }

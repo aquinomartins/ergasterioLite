@@ -14,7 +14,7 @@ $pendingCount = max(0, count($activeTeams) - $actedCount);
     <h1><?= $e($game['title']) ?></h1>
     <p><strong>Código de convite:</strong> <?= $e($game['invite_code']) ?></p>
     <p><strong>Status:</strong> <?= $e($game['status']) ?> · <strong>Rodada atual:</strong> <?= (int)$game['current_round'] ?></p>
-    <p><a href="/liquidity/games/<?= (int)$game['id'] ?>/arena">Arena pública</a> · <a href="/liquidity/<?= (int)$game['id'] ?>">Painel/controle antigo</a> · <a href="/liquidity/my-games">Meus jogos</a></p>
+    <p><a href="/liquidity/games/<?= (int)$game['id'] ?>/arena">Arena pública</a> · <a href="/liquidity/my-games">Meus jogos</a></p>
 </section>
 <section class="liquidity-card">
     <p class="liquidity-eyebrow">Controle da rodada</p>

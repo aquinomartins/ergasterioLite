@@ -47,7 +47,7 @@ $app->post('/markets/{id}/positions', [PositionController::class, 'store'], ['au
 
 $app->get('/rankings', [RankingController::class, 'index']);
 
-$app->get('/liquidity', [LiquidityAdminController::class, 'index']);
+$app->get('/liquidity', [LiquidityAdminController::class, 'index'], ['auth']);
 $app->get('/liquidity/create', [LiquidityGameController::class, 'create'], ['auth']);
 $app->post('/liquidity', [LiquidityGameController::class, 'store'], ['auth']);
 $app->get('/liquidity/my-games', [LiquidityGameController::class, 'myGames'], ['auth']);
@@ -60,14 +60,14 @@ $app->get('/liquidity/games/{gameId}/my-team', [LiquidityGameController::class, 
 $app->post('/liquidity/games/{gameId}/my-team/action', [LiquidityGameController::class, 'submitMyTeamAction'], ['auth']);
 $app->post('/liquidity/games/{gameId}/advance-round', [LiquidityGameController::class, 'advanceGameRound'], ['auth']);
 $app->get('/liquidity/games/{gameId}/arena', [LiquidityGameController::class, 'arena']);
-$app->get('/liquidity/{id}', [LiquidityAdminController::class, 'show']);
-$app->get('/liquidity/{id}/teams', [LiquidityAdminController::class, 'teams']);
-$app->post('/liquidity/{id}/teams', [LiquidityAdminController::class, 'createTeam']);
-$app->post('/liquidity/{id}/actions', [LiquidityAdminController::class, 'registerTeamAction']);
-$app->post('/liquidity/{id}/advance-round', [LiquidityAdminController::class, 'advanceRound']);
-$app->post('/liquidity/{id}/evaluate-semifinal', [LiquidityAdminController::class, 'evaluateSemifinal']);
-$app->post('/liquidity/{id}/close-final', [LiquidityAdminController::class, 'closeFinal']);
-$app->post('/liquidity/{id}/close', [LiquidityAdminController::class, 'closeSession']);
+$app->get('/liquidity/{id}', [LiquidityAdminController::class, 'show'], ['auth']);
+$app->get('/liquidity/{id}/teams', [LiquidityAdminController::class, 'teams'], ['auth']);
+$app->post('/liquidity/{id}/teams', [LiquidityAdminController::class, 'createTeam'], ['auth']);
+$app->post('/liquidity/{id}/actions', [LiquidityAdminController::class, 'registerTeamAction'], ['auth']);
+$app->post('/liquidity/{id}/advance-round', [LiquidityAdminController::class, 'advanceRound'], ['auth']);
+$app->post('/liquidity/{id}/evaluate-semifinal', [LiquidityAdminController::class, 'evaluateSemifinal'], ['auth']);
+$app->post('/liquidity/{id}/close-final', [LiquidityAdminController::class, 'closeFinal'], ['auth']);
+$app->post('/liquidity/{id}/close', [LiquidityAdminController::class, 'closeSession'], ['auth']);
 $app->get('/liquidity/{id}/projector', [LiquidityAdminController::class, 'projector']);
 
 $app->get('/liquidity/team/login', [LiquidityTeamController::class, 'loginForm']);
