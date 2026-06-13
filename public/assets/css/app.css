@@ -725,3 +725,69 @@ select {
     border-radius: 12px;
     padding: 0.8rem 0.9rem;
 }
+
+.liquidity-home-hero {
+    grid-template-columns: 1fr;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.14), rgba(139, 92, 246, 0.10));
+    border-color: rgba(14, 165, 233, 0.20);
+}
+
+.liquidity-home-hero .hero-subtitle {
+    margin: 0 0 0.75rem;
+    color: #0f172a;
+    font-size: clamp(1.2rem, 2vw, 1.55rem);
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.liquidity-home-hero .hero-copy {
+    max-width: 760px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 1.05rem;
+    line-height: 1.7;
+}
+
+.home-role-grid {
+    margin-bottom: 1.5rem;
+}
+
+.home-role-card {
+    display: flex;
+    min-height: 260px;
+    flex-direction: column;
+    gap: 0.75rem;
+    border-top: 4px solid #0ea5e9;
+}
+
+.home-role-card h2,
+.technical-note-card h2 {
+    margin: 0;
+}
+
+.home-role-card p {
+    flex: 1;
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.65;
+}
+
+.button-disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+    pointer-events: none;
+}
+
+.technical-note-card {
+    box-shadow: none;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.technical-note-card p {
+    color: var(--muted);
+    line-height: 1.65;
+}
+
+.technical-grid .card {
+    padding: 1.5rem;
+}

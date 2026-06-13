@@ -8,7 +8,6 @@ $isMasterGold = !empty($currentUser) && strtolower((string)($currentUser['role']
         <button class="nav-toggle" type="button" data-nav-toggle aria-label="Abrir menu">☰</button>
         <nav class="site-nav" data-nav>
             <a href="/">Início</a>
-            <a href="/liquidity">Piscina de Liquidez</a>
             <?php if ($currentUser): ?>
                 <a href="/liquidity/my-games">Meus jogos</a>
                 <a href="/liquidity/create">Criar jogo</a>
@@ -18,7 +17,7 @@ $isMasterGold = !empty($currentUser) && strtolower((string)($currentUser['role']
                 <form method="POST" action="/logout" class="inline-form"><?= Csrf::input() ?><button type="submit" class="link-button">Sair</button></form>
             <?php else: ?>
                 <a href="/login">Entrar</a>
-                <a href="/register">Cadastro</a>
+                <a href="/register">Criar conta</a>
             <?php endif; ?>
         </nav>
     </div>
