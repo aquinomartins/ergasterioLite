@@ -61,4 +61,10 @@ final class LiquidityGameRepository
         $statement->execute(['user_id' => $userId]);
         return $statement->fetchAll();
     }
+
+    public function getPublicArenas(): array
+    {
+        $statement = $this->pdo->query('SELECT * FROM liquidity_games ORDER BY id DESC LIMIT 50');
+        return $statement->fetchAll();
+    }
 }

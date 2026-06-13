@@ -874,3 +874,98 @@ th {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+.role-choice-grid,
+.quick-actions,
+.game-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.role-choice-card,
+.game-summary-card,
+.team-panel-block {
+    border-top: 4px solid #0ea5e9;
+}
+
+.role-choice-icon {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-weight: 900;
+}
+
+.quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.quick-actions.compact {
+    gap: 8px;
+}
+
+.game-summary-card {
+    background: #fff;
+    border: 1px solid #dbe4ef;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.team-status-panel .liquidity-stat,
+.arena-pool-state .liquidity-stat {
+    background: #f8fafc;
+}
+
+.state-message,
+.warning-text {
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-weight: 700;
+}
+
+.state-waiting,
+.status-waiting {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.state-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-approved,
+.status-action-sent {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.warning-text {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #9a3412;
+}
+
+.arena-scoreboard-header {
+    border-top: 6px solid #0f172a;
+}
+
+.arena-table tbody tr:first-child td {
+    background: #fefce8;
+}
+
+.mvp-note-card {
+    opacity: .92;
+}
