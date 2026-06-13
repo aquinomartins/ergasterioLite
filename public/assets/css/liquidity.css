@@ -969,3 +969,127 @@ th {
 .mvp-note-card {
     opacity: .92;
 }
+
+.user-games-hero p {
+    max-width: 680px;
+}
+
+.quick-actions-card h2,
+.game-section h2 {
+    margin-top: 0;
+}
+
+.game-section {
+    display: grid;
+    gap: 16px;
+}
+
+.game-card {
+    display: grid;
+    gap: 14px;
+}
+
+.game-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.game-card-header h3 {
+    margin: 0 0 6px;
+}
+
+.game-card-header p {
+    margin: 0;
+}
+
+.game-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
+}
+
+.game-meta span {
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 10px 12px;
+    color: #475569;
+}
+
+.game-meta strong {
+    color: #0f172a;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: .78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    white-space: nowrap;
+}
+
+.status-approved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-rejected,
+.status-removed {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-finished {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.invite-code {
+    display: inline-flex;
+    border-radius: 8px;
+    background: #eef2ff;
+    color: #3730a3;
+    padding: 4px 8px;
+    letter-spacing: .08em;
+}
+
+.copy-code-button {
+    cursor: default;
+}
+
+.empty-state {
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    background: #f8fafc;
+    padding: 18px;
+}
+
+.empty-state p {
+    margin-top: 0;
+}
+
+.state-approved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.state-removed {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+@media (max-width: 640px) {
+    .game-card-header {
+        flex-direction: column;
+    }
+
+    .status-badge {
+        white-space: normal;
+    }
+}

@@ -69,7 +69,7 @@ final class LiquidityParticipantRepository
 
     public function getForUser(int $userId): array
     {
-        $statement = $this->pdo->prepare('SELECT lp.*, lg.title, lg.invite_code, lg.status AS game_status, lt.name AS team_name FROM liquidity_participants lp INNER JOIN liquidity_games lg ON lg.id = lp.game_id LEFT JOIN liquidity_teams lt ON lt.id = lp.team_id WHERE lp.user_id = :user_id ORDER BY lp.joined_at DESC');
+        $statement = $this->pdo->prepare('SELECT lp.*, lg.title, lg.invite_code, lg.status AS game_status, lg.current_round, lg.max_rounds, lt.name AS team_name FROM liquidity_participants lp INNER JOIN liquidity_games lg ON lg.id = lp.game_id LEFT JOIN liquidity_teams lt ON lt.id = lp.team_id WHERE lp.user_id = :user_id ORDER BY lp.joined_at DESC, lp.id DESC');
         $statement->execute(['user_id' => $userId]);
         return $statement->fetchAll();
     }

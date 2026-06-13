@@ -57,7 +57,27 @@ final class LiquidityGameRepository
 
     public function getOwnedByUser(int $userId): array
     {
-        $statement = $this->pdo->prepare('SELECT * FROM liquidity_games WHERE owner_user_id = :user_id ORDER BY id DESC');
+        $statement = $this->pdo->prepare("
+            SELECT lg.*,
+                   (
+                       SELECT COUNT(*)
+                       FROM liquidity_participants lp
+                       WHERE lp.game_id = lg.id AND lp.status = 'pending'
+                   ) AS pending_participants_count,
+                   (
+                       SELECT COUNT(*)
+                       FROM liquidity_participants lp
+                       WHERE lp.game_id = lg.id AND lp.status = 'approved'
+                   ) AS approved_participants_count,
+                   (
+                       SELECT COUNT(*)
+                       FROM liquidity_teams lt
+                       WHERE lt.game_id = lg.id OR (lt.game_id IS NULL AND lt.session_id = lg.id)
+                   ) AS teams_count
+            FROM liquidity_games lg
+            WHERE lg.owner_user_id = :user_id
+            ORDER BY lg.id DESC
+        ");
         $statement->execute(['user_id' => $userId]);
         return $statement->fetchAll();
     }
