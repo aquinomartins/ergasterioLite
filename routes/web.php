@@ -52,6 +52,7 @@ $app->get('/liquidity/create', [LiquidityGameController::class, 'create'], ['aut
 $app->post('/liquidity', [LiquidityGameController::class, 'store'], ['auth']);
 $app->get('/liquidity/my-games', [LiquidityGameController::class, 'myGames'], ['auth']);
 $app->get('/liquidity/join', [LiquidityGameController::class, 'joinForm'], ['auth']);
+$app->get('/liquidity/arenas', [LiquidityGameController::class, 'arenas']);
 $app->post('/liquidity/join', [LiquidityGameController::class, 'join'], ['auth']);
 $app->get('/liquidity/games/{gameId}/teacher', [LiquidityGameController::class, 'teacherPanel'], ['auth']);
 $app->post('/liquidity/games/{gameId}/participants/{participantId}/approve', [LiquidityGameController::class, 'approve'], ['auth']);

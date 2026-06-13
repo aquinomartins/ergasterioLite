@@ -1,57 +1,52 @@
-<section class="hero card">
+<?php $loggedIn = !empty($currentUser); ?>
+<section class="hero card liquidity-home-hero">
     <div>
-        <span class="eyebrow">MVP em construção</span>
-        <h1>Mercado preditivo em arte com base leve, clara e pronta para evoluir.</h1>
+        <span class="eyebrow liquidity-eyebrow">Jogo principal</span>
+        <h1>Piscina de Liquidez</h1>
         <p>
-            O Ergastério Lite nasce para validar o produto com uma arquitetura compatível com hospedagem compartilhada,
-            focada em autenticação, perfis, artistas, obras e expansão gradual para mercados.
+            Piscina de Liquidez é um jogo de estratégia sobre NFT, BTC, cotas e confiança coletiva.
+            Crie uma partida, entre como equipe ou acompanhe a arena pública.
         </p>
-        <div class="hero-actions">
-            <a class="button" href="/register">Criar conta</a>
-            <a class="button button-secondary" href="/login">Já tenho acesso</a>
-        </div>
     </div>
-    <aside class="hero-panel">
-        <h2>O que já está pronto</h2>
-        <ul>
-            <li>Router simples para GET e POST</li>
-            <li>Autenticação com sessão, CSRF e flash messages</li>
-            <li>Camadas separadas para controllers, services e repositories</li>
-            <li>Migrations SQL para users, profiles, artists e artworks</li>
-        </ul>
-    </aside>
 </section>
 
-<section class="card home-liquidity-hero">
-    <div class="liquidity-entry-card">
-        <span class="eyebrow liquidity-eyebrow">Piscina de Liquidez</span>
-        <h2>Piscina de Liquidez</h2>
-        <p>
-            Arena de mercado e comportamento coletivo em que equipes depositam NFTs fictícios, recebem BTC,
-            disputam cotas e observam a confiança da piscina mudar a cada rodada.
-        </p>
-        <div class="liquidity-actions">
-            <a class="button liquidity-button-primary" href="/liquidity">Entrar como Professor</a>
-            <a class="button liquidity-button-secondary" href="/liquidity/team/login">Entrar como Equipe</a>
-            <a class="button liquidity-button-secondary" href="/liquidity">Ver Arena Pública</a>
-        </div>
-    </div>
+<section class="role-choice-grid">
+    <article class="card role-choice-card">
+        <span class="role-choice-icon">A</span>
+        <h2>Professor</h2>
+        <p>Crie uma partida, aprove participantes e controle as rodadas.</p>
+        <a class="button" href="<?= $loggedIn ? '/liquidity/create' : '/login' ?>">Criar jogo</a>
+    </article>
+    <article class="card role-choice-card">
+        <span class="role-choice-icon">B</span>
+        <h2>Equipe</h2>
+        <p>Entre com o código do jogo, aguarde aprovação e jogue pelo Painel da Equipe.</p>
+        <a class="button button-secondary" href="<?= $loggedIn ? '/liquidity/my-games' : '/login' ?>">Entrar como equipe</a>
+    </article>
+    <article class="card role-choice-card">
+        <span class="role-choice-icon">C</span>
+        <h2>Espectador</h2>
+        <p>Veja o ranking, o estado da piscina e o feed de eventos.</p>
+        <a class="button button-secondary" href="/liquidity/arenas">Ver arena pública</a>
+    </article>
+</section>
+
+<section class="card mvp-note-card">
+    <span class="eyebrow">MVP em construção</span>
+    <h2>Base técnica pronta para evoluir</h2>
+    <p>
+        O Ergastério Lite mantém autenticação, perfis, artistas, obras, mercados e o módulo da Piscina de Liquidez
+        em arquitetura simples para hospedagem compartilhada, PHP/MySQL e CSS próprio.
+    </p>
 </section>
 
 <section class="grid-two">
     <article class="card">
         <h2>Arquitetura pensada para o próximo passo</h2>
-        <p>
-            A estrutura já separa responsabilidades para facilitar a adição dos módulos de artistas, obras e mercados
-            sem reorganizar a base do projeto.
-        </p>
+        <p>A estrutura separa responsabilidades para facilitar a evolução dos módulos sem reorganizar a base do projeto.</p>
     </article>
-
     <article class="card">
         <h2>Compatível com ambiente simples</h2>
-        <p>
-            Sem framework pesado, sem websocket, sem filas e sem processos persistentes. Apenas PHP 8.2+, MySQL,
-            JavaScript leve e CSS próprio.
-        </p>
+        <p>Sem framework pesado, sem websocket, sem filas e sem processos persistentes. Apenas PHP, MySQL, JavaScript leve e CSS próprio.</p>
     </article>
 </section>

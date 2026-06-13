@@ -180,6 +180,14 @@ final class LiquidityGameController extends Controller
         $this->redirectTo('/liquidity/games/' . (int)$game['id'] . '/teacher');
     }
 
+
+    public function arenas(): void
+    {
+        $this->view('liquidity.games.arenas', [
+            'games' => (new LiquidityGameRepository($this->pdo))->getPublicArenas(),
+        ]);
+    }
+
     public function arena(string $gameId): void
     {
         $game = (new LiquidityGameRepository($this->pdo))->findById((int)$gameId); if (!$game) { http_response_code(404); echo 'Jogo não encontrado.'; return; }

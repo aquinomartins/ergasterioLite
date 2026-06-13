@@ -391,6 +391,7 @@ $roundStatus = ($finalWasClosed || ($currentRoundState['status'] ?? '') === 'clo
             <p class="liquidity-eyebrow">Decisão dos times</p>
             <h2>Registrar ação do time</h2>
         </div>
+        <p class="warning-text"><strong>Área administrativa avançada.</strong> Equipes devem registrar decisões pelo Painel da Equipe.</p>
         <p>Escolha o time principal, a ação da rodada e, para operações de mercado, informe time alvo, quantidade e preço unitário. O backend valida caixa, ativos, cotas e bloqueia a segunda ação apenas do time principal.</p>
         <?php if ($finalWasClosed): ?><p class="warning-text">A final já foi encerrada. Nenhuma nova ação pode ser registrada.</p><?php endif; ?>
         <form method="post" action="/liquidity/<?= (int)$s['id'] ?>/actions" class="liquidity-team-action-form" data-admin-action-form>
