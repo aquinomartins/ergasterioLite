@@ -11,6 +11,7 @@ use PDO;
 final class UserRepository
 {
     private ?PDO $pdo;
+    private static ?bool $usersRoleColumnExists = null;
 
     public function __construct(?PDO $pdo = null)
     {
@@ -42,8 +43,9 @@ final class UserRepository
 
     public function findWithProfileById(int $id): ?array
     {
+        $roleSelect = $this->usersRoleColumnExists() ? 'u.role' : "'user' AS role";
         $statement = $this->connection()->prepare(
-            'SELECT u.id, u.email, u.status, u.role, u.created_at, u.updated_at,
+            'SELECT u.id, u.email, u.status, ' . $roleSelect . ', u.created_at, u.updated_at,
                     p.display_name, p.username, p.bio
              FROM users u
              LEFT JOIN profiles p ON p.user_id = u.id
@@ -54,6 +56,29 @@ final class UserRepository
         $user = $statement->fetch();
 
         return $user ?: null;
+    }
+
+    private function usersRoleColumnExists(): bool
+    {
+        if (self::$usersRoleColumnExists !== null) {
+            return self::$usersRoleColumnExists;
+        }
+
+        $statement = $this->connection()->prepare(
+            'SELECT COUNT(*)
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = :table
+               AND COLUMN_NAME = :column'
+        );
+        $statement->execute([
+            'table' => 'users',
+            'column' => 'role',
+        ]);
+
+        self::$usersRoleColumnExists = ((int) $statement->fetchColumn()) > 0;
+
+        return self::$usersRoleColumnExists;
     }
 
     public function create(User $user): int
