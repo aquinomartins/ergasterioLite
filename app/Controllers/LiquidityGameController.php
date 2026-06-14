@@ -14,6 +14,7 @@ use App\Repositories\LiquidityEventRepository;
 use App\Repositories\LiquidityGameRepository;
 use App\Repositories\LiquidityParticipantRepository;
 use App\Repositories\LiquidityRoundRepository;
+use App\Repositories\LiquiditySessionRepository;
 use App\Repositories\LiquidityTeamRepository;
 use App\Repositories\LiquidityTradeProposalRepository;
 use App\Repositories\UserRepository;
@@ -267,14 +268,113 @@ final class LiquidityGameController extends Controller
 
     public function arena(string $gameId): void
     {
-        $game = (new LiquidityGameRepository($this->pdo))->findById((int)$gameId); if (!$game) { http_response_code(404); echo 'Jogo não encontrado.'; return; }
-        $teams = $this->getTeamsForGame((int)$game['id']); $round = (int)$game['current_round']; $actionRepo = new LiquidityActionRepository($this->pdo); $actedByTeam = [];
-        foreach ($teams as &$team) { $team['estimated_wealth'] = (float)$team['cash_balance'] + ((float)$team['btc_balance'] * 100) + ((int)$team['nft_balance'] * 2000) + ((int)$team['pool_shares'] * 2000); $actedByTeam[(int)$team['id']] = $actionRepo->hasTeamActed((int)$game['id'], $round, (int)$team['id']); } unset($team);
-        usort($teams, fn($a, $b) => ((float)$b['estimated_wealth'] <=> (float)$a['estimated_wealth']) ?: ((string)$a['name'] <=> (string)$b['name']));
-        $totalShares = array_sum(array_map(static fn($team): int => (int)($team['pool_shares'] ?? 0), $teams)); $poolValue = $totalShares * 2000; $estimatedDividendTotal = $poolValue * 0.10; $estimatedDividendPerShare = $totalShares > 0 ? $estimatedDividendTotal / $totalShares : 0.0;
-        $this->view('liquidity.games.arena', ['game' => $game, 'teams' => $teams, 'actedByTeam' => $actedByTeam, 'poolMetrics' => ['total_shares' => $totalShares, 'pool_value' => $poolValue, 'estimated_dividend_total' => $estimatedDividendTotal, 'estimated_dividend_per_share' => $estimatedDividendPerShare], 'events' => (new LiquidityEventRepository($this->pdo))->getRecentBySession((int)$game['id'], 30)]);
+        try {
+            $game = (new LiquidityGameRepository($this->pdo))->findById((int)$gameId);
+            if (!$game) {
+                http_response_code(404);
+                echo 'Jogo não encontrado.';
+                return;
+            }
+
+            $session = (new LiquiditySessionRepository($this->pdo))->findById((int)$game['id']) ?: [];
+            $teams = $this->getTeamsForGame((int)$game['id']);
+            $currentRound = (int)($game['current_round'] ?? $session['current_round'] ?? 1);
+            $maxRounds = (int)($game['max_rounds'] ?? $session['total_rounds'] ?? 6);
+            $values = $this->arenaValuationRules($session);
+            $actionRepo = new LiquidityActionRepository($this->pdo);
+            $actedByTeam = [];
+            $lastActionByTeam = [];
+            $decisions = [];
+
+            foreach ($teams as &$team) {
+                $teamId = (int)($team['id'] ?? 0);
+                $team['cash_balance'] = (float)($team['cash_balance'] ?? $team['cash'] ?? 0);
+                $team['btc_balance'] = (float)($team['btc_balance'] ?? $team['btc'] ?? 0);
+                $team['nft_balance'] = (int)($team['nft_balance'] ?? $team['nft_in_hand'] ?? 0);
+                $team['pool_shares'] = (int)($team['pool_shares'] ?? 0);
+                $team['estimated_wealth'] = $team['cash_balance']
+                    + ($team['btc_balance'] * $values['btc_value'])
+                    + ($team['nft_balance'] * $values['nft_value'])
+                    + ($team['pool_shares'] * $values['share_value']);
+
+                $hasActed = $actionRepo->hasTeamActed((int)$game['id'], $currentRound, $teamId);
+                $lastAction = $this->getLastActionForTeam((int)$game['id'], $teamId);
+                $actedByTeam[$teamId] = $hasActed;
+                $lastActionByTeam[$teamId] = $lastAction;
+                $decisions[] = [
+                    'team_name' => (string)($team['name'] ?? 'Equipe'),
+                    'has_acted' => $hasActed,
+                    'last_action_label' => $lastAction ? $this->arenaActionLabel((string)($lastAction['action_type'] ?? '')) : null,
+                ];
+            }
+            unset($team);
+
+            usort($teams, fn($a, $b) => ((float)$b['estimated_wealth'] <=> (float)$a['estimated_wealth']) ?: ((string)$a['name'] <=> (string)$b['name']));
+
+            $totalShares = array_sum(array_map(static fn($team): int => (int)($team['pool_shares'] ?? 0), $teams));
+            $poolValue = $totalShares * $values['share_value'];
+            $estimatedDividendTotal = $poolValue * $values['pool_yield_rate'];
+            $estimatedDividendPerShare = $totalShares > 0 ? $estimatedDividendTotal / $totalShares : 0.0;
+            $actedCount = count(array_filter($actedByTeam));
+            $events = array_map(fn($event) => $this->humanizeArenaEvent($event), (new LiquidityEventRepository($this->pdo))->getRecentBySession((int)$game['id'], 30));
+            $executedTrades = (new LiquidityTradeProposalRepository($this->pdo))->publicHistory((int)$game['id'], 12);
+
+            $this->view('liquidity.games.arena', [
+                'game' => $game,
+                'teams' => $teams,
+                'ranking' => $teams,
+                'actedByTeam' => $actedByTeam,
+                'lastActionByTeam' => $lastActionByTeam,
+                'decisions' => $decisions,
+                'poolStats' => [
+                    'total_shares' => $totalShares,
+                    'pool_value' => $poolValue,
+                    'estimated_dividend_total' => $estimatedDividendTotal,
+                    'estimated_dividend_per_share' => $estimatedDividendPerShare,
+                    'estimated_pool_nfts' => $totalShares,
+                ],
+                'poolMetrics' => [
+                    'total_shares' => $totalShares,
+                    'pool_value' => $poolValue,
+                    'estimated_dividend_total' => $estimatedDividendTotal,
+                    'estimated_dividend_per_share' => $estimatedDividendPerShare,
+                ],
+                'roundStats' => ['acted' => $actedCount, 'total' => count($teams)],
+                'recentEvents' => $events,
+                'events' => $events,
+                'executedTrades' => $executedTrades,
+                'currentRound' => $currentRound,
+                'maxRounds' => $maxRounds,
+                'statusLabel' => $this->arenaStatusLabel((string)($game['status'] ?? 'waiting')),
+                'valuationRules' => $values,
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[arena] ' . $e->getMessage());
+            http_response_code(500);
+            echo 'Não foi possível carregar esta arena no momento.';
+        }
     }
 
+    private function arenaValuationRules(array $session): array
+    {
+        return [
+            'btc_value' => (float)($session['btc_sell_price'] ?? 100),
+            'nft_value' => (float)($session['nft_pool_value'] ?? 2000),
+            'share_value' => (float)($session['nft_pool_value'] ?? 2000),
+            'pool_yield_rate' => (float)($session['pool_yield_rate'] ?? 0.10),
+        ];
+    }
+    private function arenaStatusLabel(string $status): string { return ['draft'=>'Rascunho','waiting'=>'Aguardando jogadores','active'=>'Em andamento','semifinal'=>'Semifinal','final'=>'Final','finished'=>'Encerrado'][$status] ?? 'Em acompanhamento'; }
+    private function arenaActionLabel(string $action): string { return ['deposit_nft'=>'Depositou NFT','withdraw_nft_btc'=>'Retirou NFT com BTC','withdraw_nft_cash'=>'Retirou NFT com caixa','pass'=>'Passou a vez','buy_btc'=>'Comprou BTC','sell_btc'=>'Vendeu BTC'][$action] ?? 'Decisão registrada'; }
+    private function humanizeArenaEvent(array $event): array
+    {
+        $description = trim((string)($event['description'] ?? ''));
+        if ($description === '') {
+            $description = ['deposit_nft'=>'Equipe depositou NFT na piscina.','withdraw_nft_btc'=>'Equipe retirou NFT usando BTC.','withdraw_nft_cash'=>'Equipe retirou NFT usando caixa.','pool_dividend'=>'Dividendos da piscina foram distribuídos.','round_advanced'=>'Rodada avançada.','trade_executed'=>'Transação executada entre equipes.','trade_master_executed'=>'Transação executada pelo Master Gold.'][(string)($event['event_type'] ?? '')] ?? 'Evento registrado no jogo.';
+        }
+        $event['description'] = $description;
+        return $event;
+    }
     private function isMasterGold(): bool { $u = Auth::user(); return strtolower((string)($u['role'] ?? '')) === 'master_gold'; }
     private function requireOwnedGame(int $gameId): array { $game = (new LiquidityGameRepository($this->pdo))->findById($gameId); if (!$game) { http_response_code(404); exit('Jogo não encontrado.'); } if (!$this->isMasterGold() && (int) $game['owner_user_id'] !== (int) Auth::id()) { http_response_code(403); exit('Acesso negado.'); } return $game; }
     private function generateInviteCode(): string { $repo = new LiquidityGameRepository($this->pdo); do { $code = 'PL-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6)); } while ($repo->inviteCodeExists($code)); return $code; }

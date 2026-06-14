@@ -1290,3 +1290,338 @@ th {
     .proposal-card,
     .market-group { padding: 18px; }
 }
+
+/* Public Liquidity Arena */
+.arena-page {
+    display: grid;
+    gap: 22px;
+    color: #0f172a;
+}
+
+.arena-hero,
+.arena-section {
+    background: rgba(255, 255, 255, .96);
+    border: 1px solid #dbe4ef;
+    border-radius: 22px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, .08);
+}
+
+.arena-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+    padding: clamp(22px, 4vw, 38px);
+    background: linear-gradient(135deg, #0f172a 0%, #164e63 52%, #0ea5e9 100%);
+    color: #fff;
+    overflow: hidden;
+    position: relative;
+}
+
+.arena-hero::after {
+    content: "";
+    position: absolute;
+    inset: auto -80px -120px auto;
+    width: 280px;
+    height: 280px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .12);
+}
+
+.arena-kicker {
+    margin: 0 0 8px;
+    color: #0891b2;
+    font-size: .78rem;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.arena-hero .arena-kicker {
+    color: #bae6fd;
+}
+
+.arena-title {
+    margin: 0;
+    font-size: clamp(2.2rem, 6vw, 4.6rem);
+    line-height: .95;
+    letter-spacing: -.055em;
+}
+
+.arena-subtitle {
+    margin: 12px 0 0;
+    color: #e0f2fe;
+    font-size: clamp(1.05rem, 2vw, 1.45rem);
+    font-weight: 700;
+}
+
+.arena-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.arena-meta span,
+.arena-status-badge {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 999px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, .12);
+    font-weight: 800;
+}
+
+.arena-status-badge {
+    position: relative;
+    z-index: 1;
+    background: #fff;
+    color: #0f172a;
+    white-space: nowrap;
+}
+
+.arena-status-badge.status-active { color: #166534; }
+.arena-status-badge.status-waiting { color: #92400e; }
+.arena-status-badge.status-finished { color: #334155; }
+.arena-status-badge.status-semifinal,
+.arena-status-badge.status-final { color: #7c3aed; }
+
+.arena-section {
+    padding: clamp(18px, 3vw, 26px);
+}
+
+.arena-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.arena-section-header h2 {
+    margin: 0;
+    font-size: clamp(1.45rem, 2.6vw, 2.2rem);
+    letter-spacing: -.03em;
+}
+
+.public-note {
+    max-width: 520px;
+    margin: 0;
+    color: #64748b;
+    font-size: .94rem;
+}
+
+.scoreboard-leader {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 18px;
+    border: 1px solid #fde68a;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #fffbeb, #ffffff 65%);
+}
+
+.score-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    color: #92400e;
+    font-weight: 950;
+    font-size: 1.1rem;
+}
+
+.score-team {
+    font-weight: 900;
+}
+
+.scoreboard-leader .score-team {
+    display: block;
+    font-size: 1.35rem;
+}
+
+.score-value {
+    font-weight: 950;
+    color: #0f766e;
+    white-space: nowrap;
+}
+
+.scoreboard-leader .score-value {
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
+}
+
+.scoreboard-table-wrap {
+    overflow-x: auto;
+}
+
+.scoreboard-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+.scoreboard-table th {
+    color: #64748b;
+    font-size: .78rem;
+    letter-spacing: .08em;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.scoreboard-table td {
+    padding: 13px 12px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.scoreboard-table td:first-child { border-left: 1px solid #e2e8f0; border-radius: 14px 0 0 14px; }
+.scoreboard-table td:last-child { border-right: 1px solid #e2e8f0; border-radius: 0 14px 14px 0; }
+
+.arena-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, .8fr);
+    gap: 22px;
+}
+
+.pool-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.pool-card {
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #f8fafc;
+}
+
+.pool-card span {
+    display: block;
+    margin-bottom: 8px;
+    color: #64748b;
+    font-weight: 800;
+}
+
+.pool-value {
+    font-size: clamp(1.45rem, 3vw, 2.15rem);
+    letter-spacing: -.04em;
+}
+
+.round-decisions {
+    align-self: start;
+}
+
+.decision-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid #e2e8f0;
+}
+
+.decision-row small {
+    display: block;
+    color: #64748b;
+    margin-top: 3px;
+}
+
+.decision-status {
+    display: inline-flex;
+    border-radius: 999px;
+    padding: 7px 10px;
+    font-size: .82rem;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.decision-sent { background: #dcfce7; color: #166534; }
+.decision-pending { background: #fef3c7; color: #92400e; }
+
+.event-feed,
+.market-public-list {
+    display: grid;
+    gap: 10px;
+}
+
+.event-item {
+    padding: 14px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #f8fafc;
+}
+
+.event-item span,
+.event-item strong {
+    color: #0369a1;
+    font-size: .82rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.event-item p {
+    margin: 6px 0 0;
+    color: #334155;
+}
+
+.empty-state {
+    padding: 16px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 16px;
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 800;
+}
+
+@media (max-width: 900px) {
+    .arena-hero,
+    .arena-section-header,
+    .scoreboard-leader,
+    .decision-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .arena-grid,
+    .scoreboard-leader {
+        grid-template-columns: 1fr;
+    }
+
+    .arena-status-badge,
+    .decision-status {
+        width: fit-content;
+    }
+
+    .scoreboard-table thead {
+        display: none;
+    }
+
+    .scoreboard-table,
+    .scoreboard-table tbody,
+    .scoreboard-table tr,
+    .scoreboard-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .scoreboard-table tr {
+        margin-bottom: 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        background: #f8fafc;
+        overflow: hidden;
+    }
+
+    .scoreboard-table td,
+    .scoreboard-table td:first-child,
+    .scoreboard-table td:last-child {
+        border: 0;
+        border-radius: 0;
+    }
+}
