@@ -1,146 +1,97 @@
 <?php
 $e = static fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 $money = static fn($v) => 'R$ ' . number_format((float)$v, 2, ',', '.');
-$qty = static fn($v) => rtrim(rtrim(number_format((float)$v, 4, ',', '.'), '0'), ',');
-$game = $game ?? [];
 $team = $team ?? [];
-$participant = $participant ?? [];
-$currentRound = (int)($currentRound ?? $game['current_round'] ?? 1);
-$hasActionThisRound = (bool)($hasActionThisRound ?? $hasActed ?? false);
-$availableTeams = $availableTeams ?? $teams ?? [];
-$receivedProposals = $receivedProposals ?? [];
-$sentProposals = $sentProposals ?? [];
-$recentEvents = $recentEvents ?? [];
-$tradeHistory = $tradeHistory ?? [];
-$roundOpen = ($roundState['status'] ?? 'open') === 'open';
 $estimatedWealth = (float)($team['cash_balance'] ?? 0) + ((float)($team['btc_balance'] ?? 0) * 100) + ((int)($team['nft_balance'] ?? 0) * 2000) + ((int)($team['pool_shares'] ?? 0) * 2000);
-$gameId = (int)($game['id'] ?? 0);
-$statusLabels = ['pending_counterparty'=>'Aguardando resposta','executed'=>'Executada','rejected'=>'Rejeitada','cancelled'=>'Cancelada','master_executed'=>'Executada pelo Master Gold','pending'=>'Pendente','approved'=>'Aprovada','removed'=>'Removida'];
-$teamStatusLabels = ['approved'=>'Aprovada','pending'=>'Aguardando aprovação','rejected'=>'Solicitação recusada','removed'=>'Participação removida','active'=>'Ativa'];
-$gameStatusLabels = ['waiting'=>'Aguardando início','active'=>'Em andamento','finished'=>'Encerrado','semifinal'=>'Semifinal','closed'=>'Encerrado'];
-$assetLabels = ['btc'=>'BTC','nft'=>'NFT','share'=>'cota'];
-$actionWords = ['buy'=>'Comprar','sell'=>'Vender'];
-$proposalText = static function (array $p) use ($actionWords, $assetLabels): string {
-    $action = $actionWords[(string)($p['action_type'] ?? '')] ?? ucfirst((string)($p['action_type'] ?? 'Proposta'));
-    $asset = $assetLabels[(string)($p['asset_type'] ?? '')] ?? (string)($p['asset_type'] ?? 'ativo');
-    return trim($action . ' ' . $asset);
-};
-$actionLabel = static fn($a) => ['deposit_nft'=>'Depositar NFT na piscina','withdraw_nft_btc'=>'Retirar NFT pagando 11 BTC','withdraw_nft_cash'=>'Retirar NFT pagando R$ 2.000','pass'=>'Passar a vez'][$a] ?? 'Ação registrada';
+$roundOpen = ($roundState['status'] ?? 'open') === 'open';
+$actionLabel = static fn($a) => [
+    'deposit_nft' => 'Depositar NFT na piscina',
+    'withdraw_nft_btc' => 'Retirar NFT pagando 11 BTC',
+    'withdraw_nft_cash' => 'Retirar NFT pagando R$ 2.000',
+    'pass' => 'Passar a vez',
+][$a] ?? (string)$a;
 ?>
-<div class="team-dashboard">
-    <section class="liquidity-card team-hero">
-        <div>
-            <p class="liquidity-eyebrow">Painel da Equipe</p>
-            <h1>Painel da Equipe</h1>
-            <p class="team-subtitle">Você está jogando em: <strong><?= $e($game['title'] ?? $game['name'] ?? 'Jogo sem título') ?></strong></p>
-        </div>
-        <div class="quick-actions compact">
-            <a class="button button-secondary" href="/liquidity/my-games">Voltar para Meus jogos</a>
-            <?php if ($gameId > 0): ?><a class="button" href="/liquidity/games/<?= $gameId ?>/arena">Ver Arena Pública</a><?php endif; ?>
-        </div>
-        <div class="team-status-grid">
-            <article class="team-status-card"><span>Equipe</span><strong><?= $e($team['name'] ?? 'Equipe sem nome') ?></strong></article>
-            <article class="team-status-card"><span>Rodada atual</span><strong>Rodada <?= $currentRound ?></strong></article>
-            <article class="team-status-card"><span>Status do jogo</span><strong><?= $e($gameStatusLabels[(string)($game['status'] ?? '')] ?? $game['status'] ?? 'Indefinido') ?></strong></article>
-            <article class="team-status-card"><span>Status da equipe</span><strong><?= $e($teamStatusLabels[(string)($participant['status'] ?? $team['status'] ?? '')] ?? $participant['status'] ?? $team['status'] ?? 'Indefinido') ?></strong></article>
-        </div>
-    </section>
-
+<section class="liquidity-card">
+    <p class="liquidity-eyebrow">Painel da Equipe</p>
+    <h1><?= $e($game['title'] ?? 'Jogo') ?></h1>
+    <p><strong>Código do jogo:</strong> <?= $e($game['invite_code'] ?? '') ?></p>
+    <p><strong>Status do jogo:</strong> <?= $e($game['status'] ?? '') ?></p>
+    <p><strong>Você está na Rodada <?= (int)($game['current_round'] ?? 1) ?>.</strong></p>
     <?php if (!empty($message)): ?>
-        <section class="liquidity-card team-section empty-state">
-            <h2><?= $e($participant['status'] ?? '') === 'rejected' ? 'Solicitação recusada' : ($e($participant['status'] ?? '') === 'removed' ? 'Participação removida' : 'Aguardando aprovação') ?></h2>
-            <p><?= $e($message) ?></p>
-            <p>Quando sua participação estiver aprovada, este painel mostrará os recursos, ações e propostas da sua equipe.</p>
-        </section>
+        <p><?= $e($message) ?></p>
     <?php else: ?>
-        <section class="liquidity-card team-section" id="situacao">
-            <h2>Situação da equipe</h2>
-            <div class="team-status-grid">
-                <article class="team-status-card"><span>Caixa</span><strong><?= $money($team['cash_balance'] ?? 0) ?></strong></article>
-                <article class="team-status-card"><span>BTC</span><strong><?= $qty($team['btc_balance'] ?? 0) ?></strong></article>
-                <article class="team-status-card"><span>NFTs em mãos</span><strong><?= (int)($team['nft_balance'] ?? 0) ?></strong></article>
-                <article class="team-status-card"><span>Cotas da piscina</span><strong><?= (int)($team['pool_shares'] ?? 0) ?></strong></article>
-                <article class="team-status-card"><span>Patrimônio estimado</span><strong><?= $money($estimatedWealth) ?></strong></article>
-                <article class="team-status-card"><span>Ação da rodada</span><strong><?= $hasActionThisRound ? 'Já enviada' : ($roundOpen ? 'Aguardando decisão' : 'Rodada encerrada') ?></strong></article>
-            </div>
-            <p class="team-note">Patrimônio estimado usa BTC = R$ 100, NFT = R$ 2.000 e cota = R$ 2.000.</p>
-            <?php if (!empty($lastAction)): ?><p>Sua equipe já enviou a ação desta rodada? Última ação registrada: <?= $e($actionLabel($lastAction['action_type'] ?? '') . ' — rodada ' . ($lastAction['round_number'] ?? '-')) ?>.</p><?php endif; ?>
+        <h2>Bloco 1: Situação da equipe — <?= $e($team['name'] ?? 'Equipe') ?></h2>
+        <div class="liquidity-stat-grid team-status-panel">
+            <article class="liquidity-stat"><span>Caixa em reais</span><strong><?= $money($team['cash_balance'] ?? 0) ?></strong></article>
+            <article class="liquidity-stat"><span>BTC</span><strong><?= $e($team['btc_balance'] ?? 0) ?></strong></article>
+            <article class="liquidity-stat"><span>NFTs em mãos</span><strong><?= (int)($team['nft_balance'] ?? 0) ?></strong></article>
+            <article class="liquidity-stat"><span>Cotas da piscina</span><strong><?= (int)($team['pool_shares'] ?? 0) ?></strong></article>
+            <article class="liquidity-stat"><span>Status da equipe</span><strong><?= $e($team['status'] ?? 'active') ?></strong></article>
+            <article class="liquidity-stat"><span>Patrimônio estimado</span><strong><?= $money($estimatedWealth) ?></strong></article>
+        </div>
+        <p><strong>Ação da rodada:</strong> <?= !empty($hasActed) ? 'já enviada' : ($roundOpen ? 'pendente' : 'rodada encerrada') ?></p>
+        <p><strong>Última ação realizada:</strong> <?= !empty($lastAction) ? $e($actionLabel($lastAction['action_type']) . ' — rodada ' . $lastAction['round_number']) : 'Nenhuma ação registrada ainda.' ?></p>
+        <p><strong>Último dividendo recebido:</strong> <?= !empty($lastDividend) ? $e($lastDividend['description']) : 'Nenhum dividendo recebido ainda.' ?></p>
+        <p class="action-card">Quando o professor encerrar a rodada, todas as equipes pagam R$ 100 de taxa. Se houver NFTs depositados na piscina, as cotas recebem dividendos.</p>
+        <p><a href="/liquidity/games/<?= (int)$game['id'] ?>/arena">Arena pública</a></p>
+        <section class="liquidity-card team-panel-block">
+            <h2>Bloco 2: O que você quer fazer agora?</h2>
+            <div class="quick-actions"><a class="button" href="#acoes">Fazer ação individual</a><a class="button button-secondary" href="#mercado">Negociar com outra equipe</a><a class="button button-secondary" href="#propostas">Ver propostas recebidas</a></div>
         </section>
-
-        <section class="liquidity-card team-section">
-            <h2>O que você quer fazer agora?</h2>
-            <div class="team-action-nav">
-                <a class="action-card" href="#acoes-individuais"><h3>Fazer ação individual</h3><p>Deposite, retire NFT ou passe a vez.</p></a>
-                <a class="action-card" href="#mercado"><h3>Negociar com outra equipe</h3><p>Envie proposta de compra ou venda de BTC, NFT ou cotas.</p></a>
-                <a class="action-card" href="#propostas-recebidas"><h3>Responder propostas recebidas</h3><p>Aprove ou rejeite propostas enviadas por outras equipes.</p></a>
-            </div>
-        </section>
-
-        <section class="liquidity-card team-section" id="propostas-recebidas">
-            <h2>Propostas recebidas</h2>
-            <?php $pendingReceived = array_values(array_filter($receivedProposals, static fn($p) => ($p['status'] ?? '') === 'pending_counterparty')); ?>
-            <?php if (!$pendingReceived): ?><p class="empty-state">Você não tem propostas pendentes no momento.</p><?php else: ?>
-                <div class="proposal-list">
-                    <?php foreach ($pendingReceived as $p): ?>
-                        <article class="proposal-card proposal-pending">
-                            <h3><?= $e($proposalText($p)) ?></h3>
-                            <p>Equipe proponente: <strong><?= $e($p['proposer_name'] ?? 'Equipe sem nome') ?></strong></p>
-                            <p>Quantidade: <strong><?= $qty($p['quantity'] ?? 0) ?></strong> · Preço unitário: <strong><?= $money($p['unit_price'] ?? 0) ?></strong> · Total: <strong><?= $money($p['total_price'] ?? ((float)($p['quantity'] ?? 0) * (float)($p['unit_price'] ?? 0))) ?></strong></p>
-                            <form method="post" action="/liquidity/games/<?= $gameId ?>/trades/<?= (int)($p['id'] ?? 0) ?>/approve" class="inline-form"><?= \App\Core\Csrf::input() ?><button>Aprovar transação</button></form>
-                            <form method="post" action="/liquidity/games/<?= $gameId ?>/trades/<?= (int)($p['id'] ?? 0) ?>/reject" class="inline-form"><?= \App\Core\Csrf::input() ?><button class="button-secondary">Rejeitar transação</button></form>
-                        </article>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </section>
-
-        <section class="liquidity-card team-section" id="acoes-individuais">
-            <h2>Ações individuais</h2>
+        <section class="liquidity-card team-panel-block" id="acoes">
+            <h2>Bloco 3: Ações individuais</h2>
             <p>Escolha uma ação. Sua equipe só pode concluir uma ação por rodada.</p>
-            <?php if (!$roundOpen): ?><p class="empty-state">A rodada atual já foi encerrada. Aguarde a próxima rodada.</p><?php elseif ($hasActionThisRound): ?><p class="empty-state">Sua equipe já concluiu uma ação nesta rodada.</p><?php endif; ?>
-            <?php $actions = [['deposit_nft','Depositar NFT na piscina','Você entrega NFT para a piscina, recebe BTC e ganha cotas.','Depositar NFT'],['withdraw_nft_btc','Retirar NFT pagando 11 BTC','Você usa cotas e paga BTC para recuperar NFT da piscina.','Retirar pagando BTC'],['withdraw_nft_cash','Retirar NFT pagando R$ 2.000','Você usa cotas e paga dinheiro para recuperar NFT da piscina.','Retirar pagando R$ 2.000'],['pass','Passar a vez','Você não altera seus recursos, mas registra sua decisão da rodada.','Passar a vez']]; ?>
-            <div class="liquidity-control-grid">
-                <?php foreach ($actions as [$type, $title, $help, $button]): ?>
-                    <form method="post" action="/liquidity/games/<?= $gameId ?>/my-team/action" class="action-card">
-                        <?= \App\Core\Csrf::input() ?><input type="hidden" name="action_type" value="<?= $e($type) ?>">
-                        <h3><?= $e($title) ?></h3><p><?= $e($help) ?></p>
-                        <?php if ($type !== 'pass'): ?><label>Quantidade <input type="number" name="quantity" min="1" step="1" value="1" <?= (!$roundOpen || $hasActionThisRound) ? 'disabled' : '' ?> required></label><?php endif; ?>
-                        <button type="submit" <?= (!$roundOpen || $hasActionThisRound) ? 'disabled' : '' ?>><?= $e($button) ?></button>
-                    </form>
-                <?php endforeach; ?>
-            </div>
-        </section>
-
-        <section class="liquidity-card team-section" id="mercado">
-            <h2>Mercado entre equipes</h2>
-            <p>Envie uma proposta para outra equipe. A transação só será executada se a outra equipe aprovar.</p>
-            <?php if (!$availableTeams): ?><p class="empty-state">Nenhuma equipe contraparte disponível no momento.</p><?php endif; ?>
-            <div class="liquidity-control-grid">
-                <?php foreach ([['buy','btc','Comprar BTC'],['sell','btc','Vender BTC'],['buy','nft','Comprar NFT'],['sell','nft','Vender NFT'],['buy','share','Comprar cota'],['sell','share','Vender cota']] as [$act,$asset,$label]): ?>
-                    <form method="post" action="/liquidity/games/<?= $gameId ?>/my-team/trades" class="action-card">
-                        <?= \App\Core\Csrf::input() ?><input type="hidden" name="action_type" value="<?= $e($act) ?>"><input type="hidden" name="asset_type" value="<?= $e($asset) ?>">
-                        <h3><?= $e($label) ?></h3>
-                        <label>Equipe contraparte <select name="counterparty_team_id" required <?= (!$availableTeams || !$roundOpen || $hasActionThisRound) ? 'disabled' : '' ?>><?php foreach ($availableTeams as $other): ?><option value="<?= (int)($other['id'] ?? 0) ?>"><?= $e($other['name'] ?? 'Equipe sem nome') ?></option><?php endforeach; ?></select></label>
-                        <label>Quantidade <input type="number" name="quantity" min="0.0001" step="0.0001" value="1" <?= (!$roundOpen || $hasActionThisRound) ? 'disabled' : '' ?> required></label>
-                        <label>Preço unitário em reais <input type="number" name="unit_price" min="0.01" step="0.01" value="100" <?= (!$roundOpen || $hasActionThisRound) ? 'disabled' : '' ?> required></label>
-                        <button type="submit" <?= (!$roundOpen || $hasActionThisRound || !$availableTeams) ? 'disabled' : '' ?>>Enviar proposta</button>
-                    </form>
-                <?php endforeach; ?>
-            </div>
-        </section>
-
-        <section class="liquidity-card team-section" id="propostas-enviadas">
-            <h2>Minhas propostas enviadas</h2>
-            <?php if (!$sentProposals): ?><p class="empty-state">Você ainda não enviou propostas.</p><?php else: ?><div class="liquidity-table-wrap"><table class="liquidity-table"><thead><tr><th>Contraparte</th><th>Tipo</th><th>Ativo</th><th>Quantidade</th><th>Preço unitário</th><th>Total</th><th>Status</th></tr></thead><tbody><?php foreach ($sentProposals as $p): ?><tr><td><?= $e($p['counterparty_name'] ?? 'Equipe sem nome') ?></td><td><?= $e($actionWords[(string)($p['action_type'] ?? '')] ?? '-') ?></td><td><?= $e($assetLabels[(string)($p['asset_type'] ?? '')] ?? '-') ?></td><td><?= $qty($p['quantity'] ?? 0) ?></td><td><?= $money($p['unit_price'] ?? 0) ?></td><td><?= $money($p['total_price'] ?? 0) ?></td><td><span class="status-badge proposal-<?= $e($p['status'] ?? 'pending') ?>"><?= $e($statusLabels[(string)($p['status'] ?? '')] ?? $p['status'] ?? 'Indefinido') ?></span></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
-        </section>
-
-        <section class="liquidity-card team-section" id="historico">
-            <h2>Histórico</h2>
-            <?php if (!$tradeHistory && !$recentEvents && empty($lastAction)): ?><p class="empty-state">Não há histórico de transações ainda.</p><?php else: ?>
-                <?php if (!empty($lastAction)): ?><p>Ação individual recente: <?= $e($actionLabel($lastAction['action_type'] ?? '') . ' — rodada ' . ($lastAction['round_number'] ?? '-')) ?>.</p><?php endif; ?>
-                <?php if ($tradeHistory): ?><div class="liquidity-table-wrap"><table class="liquidity-table"><thead><tr><th>Equipe proponente</th><th>Contraparte</th><th>Proposta</th><th>Total</th><th>Status</th></tr></thead><tbody><?php foreach ($tradeHistory as $p): ?><tr><td><?= $e($p['proposer_name'] ?? '-') ?></td><td><?= $e($p['counterparty_name'] ?? '-') ?></td><td><?= $e($proposalText($p)) ?></td><td><?= $money($p['total_price'] ?? 0) ?></td><td><?= $e($statusLabels[(string)($p['status'] ?? '')] ?? $p['status'] ?? 'Indefinido') ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
-                <?php if ($recentEvents): ?><div class="event-list"><?php foreach ($recentEvents as $event): ?><p><?= $e($event['description'] ?? $event['event_type'] ?? 'Evento recente') ?></p><?php endforeach; ?></div><?php endif; ?>
+            <?php if (!$roundOpen): ?>
+                <p><strong>A rodada atual já foi encerrada. Aguarde o início da próxima rodada.</strong></p>
+            <?php elseif (!empty($hasActed)): ?>
+                <p><strong>Sua equipe já realizou uma ação nesta rodada.</strong></p>
             <?php endif; ?>
+            <?php $actions = [
+                ['deposit_nft', 'Depositar NFT na piscina', 'Você informa a quantidade de NFTs, recebe 10 BTC e ganha 1 cota por NFT depositado.'],
+                ['withdraw_nft_btc', 'Retirar NFT pagando 11 BTC', 'Você usa 1 cota e paga 11 BTC para recuperar 1 NFT.'],
+                ['withdraw_nft_cash', 'Retirar NFT pagando R$ 2.000', 'Você usa 1 cota e paga R$ 2.000 para recuperar 1 NFT.'],
+                ['pass', 'Passar a vez', 'Você não altera seus recursos, mas registra sua decisão da rodada.'],
+            ]; ?>
+            <div class="liquidity-control-grid">
+                <?php foreach ($actions as [$type, $label, $help]): ?>
+                    <form method="post" action="/liquidity/games/<?= (int)$game['id'] ?>/my-team/action" class="action-card">
+                        <?= \App\Core\Csrf::input() ?>
+                        <input type="hidden" name="action_type" value="<?= $e($type) ?>">
+                        <h3><?= $e($label) ?></h3>
+                        <p><?= $e($help) ?></p>
+                        <?php if ($type !== 'pass'): ?><label>Quantidade <input type='number' name='quantity' min='1' step='1' value='1'></label><?php endif; ?>
+                        <button type="submit" <?= (!$roundOpen || !empty($hasActed)) ? 'disabled' : '' ?>><?= $e($label) ?></button>
+                    </form>
+                <?php endforeach; ?>
+            </div>
         </section>
+
+            <section class="liquidity-card team-panel-block" id="mercado">
+                <h2>Bloco 4: Mercado entre equipes</h2>
+                <p>Comprar BTC: escolha uma equipe vendedora, informe a quantidade de BTC e o preço unitário em reais. As demais ações seguem a mesma lógica bilateral e só executam após aprovação da contraparte.</p>
+                <?php $marketActions = [
+                    ['buy','btc','Comprar BTC de outra equipe'], ['sell','btc','Vender BTC para outra equipe'],
+                    ['buy','nft','Comprar NFT de outra equipe'], ['sell','nft','Vender NFT para outra equipe'],
+                    ['buy','share','Comprar cota de outra equipe'], ['sell','share','Vender cota para outra equipe'],
+                ]; ?>
+                <div class="liquidity-control-grid">
+                <?php foreach ($marketActions as [$act,$asset,$label]): ?>
+                    <form method="post" action="/liquidity/games/<?= (int)$game['id'] ?>/my-team/trades" class="action-card">
+                        <?= \App\Core\Csrf::input() ?>
+                        <input type="hidden" name="action_type" value="<?= $e($act) ?>"><input type="hidden" name="asset_type" value="<?= $e($asset) ?>">
+                        <h3><?= $e($label) ?></h3>
+                        <label>Contraparte <select name="counterparty_team_id" required><?php foreach (($teams ?? []) as $other): ?><option value="<?= (int)$other['id'] ?>"><?= $e($other['name']) ?></option><?php endforeach; ?></select></label>
+                        <label>Quantidade <input type="number" name="quantity" min="0.0001" step="0.0001" value="1" required></label>
+                        <label>Preço unitário (R$) <input type="number" name="unit_price" min="0.01" step="0.01" value="100" required></label>
+                        <button type="submit" <?= (!$roundOpen || !empty($hasActed) || empty($teams)) ? 'disabled' : '' ?>>Enviar proposta</button>
+                    </form>
+                <?php endforeach; ?>
+                </div>
+            </section>
+            <section class="liquidity-card team-panel-block" id="propostas"><h2>Bloco 5: Propostas recebidas</h2><?php if (empty($receivedProposals)): ?><p>Nenhuma proposta recebida.</p><?php else: ?><div class="liquidity-table-wrap"><table class="liquidity-table"><tr><th>Proponente</th><th>Tipo</th><th>Qtd.</th><th>Total</th><th>Status</th><th>Ações</th></tr><?php foreach ($receivedProposals as $p): ?><tr><td><?= $e($p['proposer_name'] ?? '') ?></td><td><?= $e($p['action_type'].' '.$p['asset_type']) ?></td><td><?= $e($p['quantity']) ?></td><td><?= $money($p['total_price']) ?></td><td><?= $e($p['status']) ?></td><td><?php if ($p['status']==='pending_counterparty'): ?><form method="post" action="/liquidity/games/<?= (int)$game['id'] ?>/trades/<?= (int)$p['id'] ?>/approve" style="display:inline"><?= \App\Core\Csrf::input() ?><button>Aprovar transação</button></form> <form method="post" action="/liquidity/games/<?= (int)$game['id'] ?>/trades/<?= (int)$p['id'] ?>/reject" style="display:inline"><?= \App\Core\Csrf::input() ?><button>Rejeitar transação</button></form><?php endif; ?></td></tr><?php endforeach; ?></table></div><?php endif; ?></section>
+            <section class="liquidity-card team-panel-block"><h2>Minhas propostas enviadas</h2><?php if (empty($sentProposals)): ?><p>Nenhuma proposta enviada.</p><?php else: ?><div class="liquidity-table-wrap"><table class="liquidity-table"><tr><th>Tipo</th><th>Contraparte</th><th>Qtd.</th><th>Unitário</th><th>Total</th><th>Status</th></tr><?php foreach ($sentProposals as $p): ?><tr><td><?= $e($p['action_type'].' '.$p['asset_type']) ?></td><td><?= $e($p['counterparty_name'] ?? '') ?></td><td><?= $e($p['quantity']) ?></td><td><?= $money($p['unit_price']) ?></td><td><?= $money($p['total_price']) ?></td><td><?= $e($p['status']) ?></td></tr><?php endforeach; ?></table></div><?php endif; ?></section>
+            <section class="liquidity-card team-panel-block" id="historico"><h2>Bloco 6: Histórico</h2><?php if (empty($tradeHistory)): ?><p>Nenhuma transação no histórico.</p><?php else: ?><div class="liquidity-table-wrap"><table class="liquidity-table"><tr><th>Proponente</th><th>Contraparte</th><th>Tipo</th><th>Total</th><th>Status</th></tr><?php foreach ($tradeHistory as $p): ?><tr><td><?= $e($p['proposer_name'] ?? '') ?></td><td><?= $e($p['counterparty_name'] ?? '') ?></td><td><?= $e($p['action_type'].' '.$p['asset_type']) ?></td><td><?= $money($p['total_price']) ?></td><td><?= $e($p['status']) ?></td></tr><?php endforeach; ?></table></div><?php endif; ?></section>
+
     <?php endif; ?>
-</div>
+    <p><a href="/liquidity/my-games">Meus jogos</a></p>
+</section>
