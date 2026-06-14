@@ -1093,3 +1093,111 @@ th {
         white-space: normal;
     }
 }
+
+.team-dashboard {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.team-hero,
+.team-section {
+    display: grid;
+    gap: 1rem;
+}
+
+.team-subtitle {
+    color: #475569;
+    font-size: 1.05rem;
+    margin: 0;
+}
+
+.team-status-grid,
+.team-action-nav,
+.proposal-list {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.team-status-card,
+.proposal-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1rem;
+}
+
+.team-status-card span {
+    color: #64748b;
+    display: block;
+    font-size: .86rem;
+    font-weight: 700;
+    margin-bottom: .35rem;
+}
+
+.team-status-card strong {
+    color: #0f172a;
+    font-size: 1.15rem;
+}
+
+.team-action-nav .action-card {
+    color: inherit;
+    text-decoration: none;
+}
+
+.team-note {
+    color: #64748b;
+    font-size: .92rem;
+    margin: 0;
+}
+
+.proposal-card h3,
+.action-card h3 {
+    margin-top: 0;
+}
+
+.proposal-pending {
+    border-color: #f59e0b;
+}
+
+.proposal-executed,
+.proposal-master_executed {
+    background: #ecfdf5;
+    color: #166534;
+}
+
+.proposal-rejected,
+.proposal-cancelled {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.proposal-pending_counterparty,
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.inline-form {
+    display: inline-flex;
+    margin: .25rem .5rem .25rem 0;
+}
+
+.event-list {
+    border-left: 3px solid #cbd5e1;
+    display: grid;
+    gap: .5rem;
+    padding-left: 1rem;
+}
+
+.event-list p {
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .team-status-grid,
+    .team-action-nav,
+    .proposal-list {
+        grid-template-columns: 1fr;
+    }
+}
