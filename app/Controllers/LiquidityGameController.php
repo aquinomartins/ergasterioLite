@@ -126,11 +126,23 @@ final class LiquidityGameController extends Controller
     {
         $game = (new LiquidityGameRepository($this->pdo))->findById((int) $gameId); if (!$game) { http_response_code(404); echo 'Jogo não encontrado.'; return; }
         $participant = (new LiquidityParticipantRepository($this->pdo))->findByGameAndUser((int) $game['id'], (int) Auth::id()); if (!$participant) { http_response_code(403); echo 'Você não participa deste jogo.'; return; }
-        if ($participant['status'] !== 'approved') { $message = $participant['status'] === 'rejected' ? 'Sua solicitação para este jogo foi recusada.' : 'Sua entrada ainda aguarda aprovação do professor.'; $this->view('liquidity.games.my_team', ['game' => $game, 'participant' => $participant, 'message' => $message]); return; }
+        $defaultPanelData = ['team' => [], 'currentRound' => (int)($game['current_round'] ?? 1), 'hasActionThisRound' => false, 'hasActed' => false, 'roundState' => [], 'availableTeams' => [], 'teams' => [], 'receivedProposals' => [], 'sentProposals' => [], 'recentEvents' => [], 'tradeHistory' => []];
+        if ($participant['status'] !== 'approved') {
+            $messages = [
+                'pending' => 'Sua entrada ainda aguarda aprovação do professor.',
+                'rejected' => 'Sua solicitação para este jogo foi recusada.',
+                'removed' => 'Sua participação foi removida deste jogo.',
+            ];
+            $this->view('liquidity.games.my_team', array_merge($defaultPanelData, ['game' => $game, 'participant' => $participant, 'message' => $messages[(string)$participant['status']] ?? 'Sua participação ainda não está aprovada.']));
+            return;
+        }
         $team = (new LiquidityTeamRepository($this->pdo))->findById((int) $participant['team_id']); if (!$team || !$this->teamBelongsToGame($team, (int)$game['id'])) { http_response_code(403); echo 'Equipe inválida.'; return; }
         $actionRepo = new LiquidityActionRepository($this->pdo); $round = (int)$game['current_round'];
-        $roundState = (new LiquidityRoundRepository($this->pdo))->getCurrentRound((int)$game['id'], $round);
-        $this->view('liquidity.games.my_team', ['game' => $game, 'participant' => $participant, 'team' => $team, 'hasActed' => $actionRepo->hasTeamActed((int)$game['id'], $round, (int)$team['id']), 'roundState' => $roundState, 'lastAction' => $this->getLastActionForTeam((int)$game['id'], (int)$team['id']), 'lastDividend' => $this->getLastDividendForTeam((int)$game['id'], (int)$team['id']), 'teams' => $this->getOtherTeamsForGame((int)$game['id'], (int)$team['id']), 'sentProposals' => (new LiquidityTradeProposalRepository($this->pdo))->sent((int)$game['id'], (int)$team['id']), 'receivedProposals' => (new LiquidityTradeProposalRepository($this->pdo))->received((int)$game['id'], (int)$team['id']), 'tradeHistory' => (new LiquidityTradeProposalRepository($this->pdo))->history((int)$game['id'], (int)$team['id'])]);
+        $roundState = (new LiquidityRoundRepository($this->pdo))->getCurrentRound((int)$game['id'], $round) ?: [];
+        $tradeRepo = new LiquidityTradeProposalRepository($this->pdo);
+        $availableTeams = $this->getOtherTeamsForGame((int)$game['id'], (int)$team['id']);
+        $hasActionThisRound = $actionRepo->hasTeamActed((int)$game['id'], $round, (int)$team['id']);
+        $this->view('liquidity.games.my_team', ['game' => $game, 'participant' => $participant, 'team' => $team, 'currentRound' => $round, 'hasActionThisRound' => $hasActionThisRound, 'hasActed' => $hasActionThisRound, 'roundState' => $roundState, 'lastAction' => $this->getLastActionForTeam((int)$game['id'], (int)$team['id']), 'lastDividend' => $this->getLastDividendForTeam((int)$game['id'], (int)$team['id']), 'availableTeams' => $availableTeams, 'teams' => $availableTeams, 'sentProposals' => $tradeRepo->sent((int)$game['id'], (int)$team['id']) ?: [], 'receivedProposals' => $tradeRepo->received((int)$game['id'], (int)$team['id']) ?: [], 'tradeHistory' => $tradeRepo->history((int)$game['id'], (int)$team['id']) ?: [], 'recentEvents' => (new LiquidityEventRepository($this->pdo))->getRecentBySession((int)$game['id'], 20) ?: []]);
     }
 
     public function submitMyTeamAction(string $gameId): void
