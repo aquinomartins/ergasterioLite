@@ -98,13 +98,87 @@ final class LiquidityGameController extends Controller
     {
         $game = $this->requireOwnedGame((int) $gameId);
         $participants = new LiquidityParticipantRepository($this->pdo);
+        $session = (new LiquiditySessionRepository($this->pdo))->findById((int)$game['id']) ?: [];
         $teams = $this->getTeamsForGame((int) $game['id']);
-        $round = (int) $game['current_round'];
+        $currentRound = (int)($game['current_round'] ?? $session['current_round'] ?? 1);
+        $maxRounds = (int)($game['max_rounds'] ?? $session['total_rounds'] ?? 6);
+        $values = $this->arenaValuationRules($session);
         $actionRepo = new LiquidityActionRepository($this->pdo);
-        $actedByTeam = []; $lastActionByTeam = [];
-        foreach ($teams as $team) { $tid = (int) $team['id']; $actedByTeam[$tid] = $actionRepo->hasTeamActed((int) $game['id'], $round, $tid); $lastActionByTeam[$tid] = $this->getLastActionForTeam((int) $game['id'], $tid); }
-        $currentRoundState = (new LiquidityRoundRepository($this->pdo))->getCurrentRound((int) $game['id'], $round);
-        $this->view('liquidity.games.teacher', ['game' => $game, 'pendingParticipants' => $participants->getByGame((int) $game['id'], 'pending'), 'approvedParticipants' => $participants->getByGame((int) $game['id'], 'approved'), 'rejectedParticipants' => $participants->getByGame((int) $game['id'], 'rejected'), 'teams' => $teams, 'actedByTeam' => $actedByTeam, 'lastActionByTeam' => $lastActionByTeam, 'currentRoundState' => $currentRoundState, 'events' => (new LiquidityEventRepository($this->pdo))->getRecentBySession((int) $game['id'], 30)]);
+        $actedByTeam = [];
+        $lastActionByTeam = [];
+        $decidedTeams = [];
+        $pendingTeams = [];
+
+        foreach ($teams as &$team) {
+            $teamId = (int)($team['id'] ?? 0);
+            $team['cash_balance'] = (float)($team['cash_balance'] ?? $team['cash'] ?? 0);
+            $team['btc_balance'] = (float)($team['btc_balance'] ?? $team['btc'] ?? 0);
+            $team['nft_balance'] = (int)($team['nft_balance'] ?? $team['nft_in_hand'] ?? 0);
+            $team['pool_shares'] = (int)($team['pool_shares'] ?? 0);
+            $team['estimated_wealth'] = $team['cash_balance']
+                + ($team['btc_balance'] * $values['btc_value'])
+                + ($team['nft_balance'] * $values['nft_value'])
+                + ($team['pool_shares'] * $values['share_value']);
+
+            $hasActed = $actionRepo->hasTeamActed((int)$game['id'], $currentRound, $teamId);
+            $actedByTeam[$teamId] = $hasActed;
+            $lastActionByTeam[$teamId] = $this->getLastActionForTeam((int)$game['id'], $teamId);
+
+            if (($team['status'] ?? 'active') === 'active' && (int)($team['is_eliminated'] ?? 0) === 0) {
+                if ($hasActed) {
+                    $decidedTeams[] = $team;
+                } else {
+                    $pendingTeams[] = $team;
+                }
+            }
+        }
+        unset($team);
+
+        $activeTeamsCount = count($decidedTeams) + count($pendingTeams);
+        $actedCount = count($decidedTeams);
+        $roundStats = [
+            'current_round' => $currentRound,
+            'active_teams' => $activeTeamsCount,
+            'acted' => $actedCount,
+            'pending' => count($pendingTeams),
+            'percent' => $activeTeamsCount > 0 ? (int)round(($actedCount / $activeTeamsCount) * 100) : 0,
+            'decided_teams' => $decidedTeams,
+            'pending_teams' => $pendingTeams,
+        ];
+
+        $totalShares = array_sum(array_map(static fn($team): int => (int)($team['pool_shares'] ?? 0), $teams));
+        $poolValue = $totalShares * $values['share_value'];
+        $estimatedDividendTotal = $poolValue * $values['pool_yield_rate'];
+        $poolStats = [
+            'maintenance_fee' => (float)($session['round_fee'] ?? 100),
+            'total_shares' => $totalShares,
+            'pool_value' => $poolValue,
+            'estimated_dividend_total' => $estimatedDividendTotal,
+            'estimated_dividend_per_share' => $totalShares > 0 ? $estimatedDividendTotal / $totalShares : 0,
+        ];
+
+        $events = array_map(fn($event) => $this->humanizeArenaEvent($event), (new LiquidityEventRepository($this->pdo))->getRecentBySession((int)$game['id'], 30));
+
+        $this->view('liquidity.games.teacher', [
+            'game' => $game,
+            'pendingParticipants' => $participants->getByGame((int) $game['id'], 'pending'),
+            'approvedParticipants' => $participants->getByGame((int) $game['id'], 'approved'),
+            'rejectedParticipants' => array_merge($participants->getByGame((int) $game['id'], 'rejected'), $participants->getByGame((int) $game['id'], 'removed')),
+            'teams' => $teams,
+            'actionsThisRound' => $actedByTeam,
+            'actedByTeam' => $actedByTeam,
+            'lastActionByTeam' => $lastActionByTeam,
+            'currentRoundState' => (new LiquidityRoundRepository($this->pdo))->getCurrentRound((int) $game['id'], $currentRound) ?: ['status' => 'open'],
+            'roundStats' => $roundStats,
+            'poolStats' => $poolStats,
+            'pendingProposals' => $this->getTeacherTradeProposals((int)$game['id']),
+            'recentEvents' => $events,
+            'events' => $events,
+            'currentRound' => $currentRound,
+            'maxRounds' => $maxRounds,
+            'statusLabel' => $this->arenaStatusLabel((string)($game['status'] ?? 'waiting')),
+            'valuationRules' => $values,
+        ]);
     }
 
     public function approve(string $gameId, string $participantId): void
@@ -355,6 +429,13 @@ final class LiquidityGameController extends Controller
         }
     }
 
+
+    private function getTeacherTradeProposals(int $gameId): array
+    {
+        $stmt = $this->pdo->prepare("SELECT p.*, pt.name proposer_name, ct.name counterparty_name FROM liquidity_trade_proposals p LEFT JOIN liquidity_teams pt ON pt.id = p.proposer_team_id LEFT JOIN liquidity_teams ct ON ct.id = p.counterparty_team_id WHERE p.game_id = ? ORDER BY p.id DESC LIMIT 50");
+        $stmt->execute([$gameId]);
+        return $stmt->fetchAll();
+    }
     private function arenaValuationRules(array $session): array
     {
         return [
